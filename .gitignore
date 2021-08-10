@@ -1,0 +1,8 @@
+*.o
+*.a
+test
+test_rdpmc
+test_uncore
+test_mmap
+test_pmu
+uncore_address_map
