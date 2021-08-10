@@ -26,7 +26,7 @@
 	#define MSR_UNC_CTR_DISABLE (uint64_t)(0)
 	#define GLOBAL_CTRL_PMI_CORE_SEL(n) (1 << n) //Can select multiple cores to have a forwarded PMI by using this
 	
-	//CB0 Perf Monitoring//
+	//CBo Perf Monitoring//
 	#define MSR_UNC_CBO_CONFIG 0x396 //Reading returns the number of CBos (subtract one)
 	#define CBO_MAX_CTR 2
 	#define MSR_UNC_CBO_PERFEVTSEL(CBo,n) (0x700 + (CBo*0x10) + n)
@@ -36,6 +36,10 @@
 	#define ARB_MAX_CTR 2
 	#define MSR_UNC_ARB_PERFEVTSEL(ARB) (0x3B2 + ARB)
 	#define MSR_UNC_ARB_PERFCTR(ARB) (0x3B0 + ARB)
+
+	//CBo and ARB CTR Mask. Bitwise & with this to clear bits
+	#define MSR_CBO_ARB_MASK (uint64_t)(0x0FFFFFFFFFFF)
+	#define MSR_FIXED_MASK   (uint64_t)(0xFFFFFFFFFFFF)
 
 	//Fixed uncore counter MSRs//
 	#define FIXED_MAX_CTR 1

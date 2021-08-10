@@ -343,6 +343,7 @@ void uncore_perfmon_monitor(uncore_perfmon_t *u, void (*exe)(void *, void *), vo
 
 	int cpu = sched_getcpu();
 
+	register uint8_t fail = 1;
 	register uint8_t n_cbo = uncore_get_num_cbo();
 	register uint8_t *map = u->cbo_ctrs_map;
 
@@ -352,72 +353,85 @@ void uncore_perfmon_monitor(uncore_perfmon_t *u, void (*exe)(void *, void *), vo
 	register uint8_t *reg_num_arb_ctrs = &(u->num_arb_ctrs);
 	register uint8_t *reg_num_fixed_ctrs = &(u->num_fixed_ctrs);
 
-	
+	//Incorporated some error checking due to weird values sometimes reported when reading from /dev/cpu/X/msr
+	while(fail)
+	{
+		fail = 0;
 
-	//Reset values
-	for (register int s = 0; s < REG_TOTAL_CTRS; ++s)
-	{
-		u->results[s].val_before = 0;
-		u->results[s].val_after = 0;
-		u->results[s].total = 0;
-		u->results[s].min = -1;
-		u->results[s].max = 0;
-	}
-
-	//warmup of 10 loops to get the counters fresh
-	#pragma GCC unroll 4096
-	for (int s = 0; s < 1000; ++s)
-	{
-		exe(arg1, arg2);
-	}
-	//Read Counters
-	#pragma GCC unroll 4096
-	for (register int s = 0, c = 0; s < n_cbo * CBO_MAX_CTR; ++s)
-	{
-		if(map[s])
+		//Reset values
+		for (register int s = 0; s < REG_TOTAL_CTRS; ++s)
 		{
-			u->results[c].val_before = rdmsr(cpu, MSR_UNC_CBO_PERFCTR(u->cbo_ctrs_info[s].cbo, s % CBO_MAX_CTR));
-			c++;
+			u->results[s].val_before = 0;
+			u->results[s].val_after = 0;
+			u->results[s].total = 0;
+			u->results[s].min = -1;
+			u->results[s].max = 0;
 		}
-	}
-	#pragma GCC unroll 4096
-	for (register int s = 0; s < *reg_num_arb_ctrs; ++s)
-		u->results[s + *reg_num_cbo_ctrs].val_before = rdmsr(cpu, MSR_UNC_ARB_PERFCTR(s));
-	#pragma GCC unroll 4096
-	for (register int s = 0; s < *reg_num_fixed_ctrs; ++s)
-		u->results[s + *reg_num_cbo_ctrs + *reg_num_arb_ctrs].val_before = rdmsr(cpu, MSR_UNC_PERF_FIXED_CTR);
 
-	//Execute the assembled code
-	#pragma GCC unroll 4096
-	for (register int s = 0; s < *reg_samples; ++s)
-	{
-		exe(arg1, arg2);
-	}
-
-	//Read after execution		
-	#pragma GCC unroll 4096
-	for (register int s = 0, c = 0; s < n_cbo * CBO_MAX_CTR; ++s)
-	{
-		if(map[s])
+		//warmup of 10 loops to get the counters fresh
+		#pragma GCC unroll 4096
+		for (int s = 0; s < 1000; ++s)
 		{
-			u->results[c].val_after = rdmsr(cpu, MSR_UNC_CBO_PERFCTR(u->cbo_ctrs_info[s].cbo, s % CBO_MAX_CTR));
-			c++;
+			exe(arg1, arg2);
 		}
-	}
-	#pragma GCC unroll 4096
-	for (register int s = 0; s < *reg_num_arb_ctrs; ++s)
-		u->results[s + *reg_num_cbo_ctrs].val_after = rdmsr(cpu, MSR_UNC_ARB_PERFCTR(s));
-	#pragma GCC unroll 4096
-	for (register int s = 0; s < *reg_num_fixed_ctrs; ++s)
-	{
-		u->results[s + *reg_num_cbo_ctrs + *reg_num_arb_ctrs].val_after = rdmsr(cpu, MSR_UNC_PERF_FIXED_CTR);
-	}
+		//Read Counters
+		#pragma GCC unroll 4096
+		for (register int s = 0, c = 0; s < n_cbo * CBO_MAX_CTR; ++s)
+		{
+			if(map[s])
+			{
+				u->results[c].val_before = rdmsr(cpu, MSR_UNC_CBO_PERFCTR(u->cbo_ctrs_info[s].cbo, s % CBO_MAX_CTR));
+				c++;
+			}
+		}
+		#pragma GCC unroll 4096
+		for (register int s = 0; s < *reg_num_arb_ctrs; ++s)
+		{
+			u->results[s + *reg_num_cbo_ctrs].val_before = rdmsr(cpu, MSR_UNC_ARB_PERFCTR(s));
+		}
+		#pragma GCC unroll 4096
+		for (register int s = 0; s < *reg_num_fixed_ctrs; ++s)
+			u->results[s + *reg_num_cbo_ctrs + *reg_num_arb_ctrs].val_before = rdmsr(cpu, MSR_UNC_PERF_FIXED_CTR);
 
-	//Collect results
-	for (register int s = 0; s < REG_TOTAL_CTRS; ++s)
-	{
-		u->results[s].total = u->results[s].val_after - u->results[s].val_before;
-	}
+		//Execute the assembled code
+		#pragma GCC unroll 4096
+		for (register int s = 0; s < *reg_samples; ++s)
+		{
+			exe(arg1, arg2);
+		}
+
+		//Read after execution		
+		#pragma GCC unroll 4096
+		for (register int s = 0, c = 0; s < n_cbo * CBO_MAX_CTR; ++s)
+		{
+			if(map[s])
+			{
+				u->results[c].val_after = rdmsr(cpu, MSR_UNC_CBO_PERFCTR(u->cbo_ctrs_info[s].cbo, s % CBO_MAX_CTR));
+				c++;
+			}
+		}
+		#pragma GCC unroll 4096
+		for (register int s = 0; s < *reg_num_arb_ctrs; ++s)
+		{
+			u->results[s + *reg_num_cbo_ctrs].val_after = rdmsr(cpu, MSR_UNC_ARB_PERFCTR(s));
+		}
+		#pragma GCC unroll 4096
+		for (register int s = 0; s < *reg_num_fixed_ctrs; ++s)
+		{
+			u->results[s + *reg_num_cbo_ctrs + *reg_num_arb_ctrs].val_after = rdmsr(cpu, MSR_UNC_PERF_FIXED_CTR);
+		}
+
+		//Collect results
+		#pragma GCC unroll 4096
+		for (register int s = 0; s < REG_TOTAL_CTRS; ++s)
+		{
+			u->results[s].total = u->results[s].val_after - u->results[s].val_before;
+			if(u->results[s].val_before <= 1000000 || u->results[s].val_after <= 1000000 || (u->results[s].total >> 48) > 0)
+			{
+				fail = 1;
+			}
+		}
+	}	
 }
 
 //For if we want to run two different functions back to back e.g. accessing a list forwards then backwards to minimise cache thrashing

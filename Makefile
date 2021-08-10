@@ -28,6 +28,11 @@ test_pmu: test_pmu.c perf_counters.a
 uncore_address_map: uncore_address_map.c perf_counters.a
 	$(CC) $(CFLAGS) -o $@ $^
 
+uncore_address_map-run: uncore_address_map
+	echo 4096 | sudo tee /proc/sys/vm/nr_hugepages > /dev/null
+	sudo taskset -c 0 ./uncore_address_map
+	echo 4096 | sudo tee /proc/sys/vm/nr_hugepages > /dev/null
+
 test: test_uncore test_pmu uncore_address_map
 
 all: lib test 

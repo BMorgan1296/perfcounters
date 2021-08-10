@@ -1,13 +1,20 @@
-#include "perf_counters.h"
 #include <sys/mman.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <fcntl.h>
+#include <unistd.h>
+
+#include "perf_counters.h"
 
 #define NUM_SAMPLES 10000000
 
-#define MMAP_FLAGS (MAP_PRIVATE | MAP_ANONYMOUS)
+#define MMAP_FLAGS (MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB)
+
 #define PAGE_SIZE 4096
+#define HUGEPAGEBITS 21
+#define HUGEPAGESIZE (1<<HUGEPAGEBITS)
+#define HUGEPAGEMASK (HUGEPAGESIZE - 1)
 
 #define L1D 32768
 #define L1_SETS 64
@@ -15,7 +22,35 @@
 #define L1_CACHELINE 64
 #define L1_STRIDE (L1_CACHELINE * L1_SETS)
 #define L1_CACHE_SET 0 
+
+#define L2 262144
+#define L2_SETS 1024
+#define L2_ASSOCIATIVITY 4
+#define L2_CACHELINE 64
+#define L2_STRIDE (L2_CACHELINE * L2_SETS)
+
 #define MEM_ACCESS_OFFSET ((L1_STRIDE) + (L1_CACHE_SET * L1_CACHELINE))
+
+uint64_t vtop(unsigned pid, uint64_t vaddr)
+{
+	char path[1024];
+	sprintf (path, "/proc/%u/pagemap", pid);
+	int fd = open (path, O_RDONLY);
+	if (fd < 0)
+	{
+		return -1;
+	}
+
+	uint64_t paddr = -1;
+	uint64_t index = (vaddr / HUGEPAGESIZE) * sizeof(paddr);
+	if (pread (fd, &paddr, sizeof(paddr), index) != sizeof(paddr))
+	{
+		return -1;
+	}
+	close (fd);
+	paddr &= 0x7fffffffffffff;
+	return (paddr << HUGEPAGEBITS) | (vaddr & (HUGEPAGESIZE-1));
+}
 
 static inline void clflush(void *v, void *v1) 
 {
@@ -93,7 +128,7 @@ int main(int argc, char const *argv[])
 		},
 	};
 
-	uncore_perfmon_init(&u, 0, NUM_SAMPLES, 1, 0, 1, cbo_ctrs, arb_ctrs, fixed_ctrs);
+	uncore_perfmon_init(&u, 0, NUM_SAMPLES, 4, 0, 1, cbo_ctrs, arb_ctrs, fixed_ctrs);
 
 	printf("addr\t");
 	uncore_perfmon_print_headers_csv(&u);
