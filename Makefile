@@ -25,16 +25,9 @@ test_uncore: test_uncore.c perf_counters.a
 test_pmu: test_pmu.c perf_counters.a
 	$(CC) $(CFLAGS) -o $@ $^
 
-uncore_address_map: uncore_address_map.c perf_counters.a
-	$(CC) $(CFLAGS) -o $@ $^
-
-uncore_address_map-run: uncore_address_map
-	sudo modprobe msr
-	sudo taskset -c 0 ./uncore_address_map
-
 test: test_uncore test_pmu uncore_address_map
 
 all: lib test 
 
 clean:
-	rm -rf *.o *.a test_uncore test_pmu uncore_address_map
+	rm -rf *.o *.a test_uncore test_pmu
