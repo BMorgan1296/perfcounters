@@ -7,7 +7,7 @@
 
 #include "perf_counters.h"
 
-#define NUM_SAMPLES 1000000  //10000000
+#define NUM_SAMPLES 20000  //10000000
 
 #ifndef MAP_HUGETLB
 	#define MAP_HUGETLB 0x40000 /* arch specific */
@@ -141,67 +141,77 @@ void get_slice_values(int n_addr, int len, uint8_t *mem, uint8_t *slice_map)
 
 	//printf("addr\tslice\n");
 	//printf("addr\t");
+	unsigned int pid = (unsigned int)getpid();
 	for (uint64_t i = 0; i < n_addr; ++i)
 	{
-		unsigned int pid = (unsigned int)getpid();
 		mem[((i*L3_CACHELINE))] = pid;
 		uint64_t pa = vtop(pid, (uint64_t)&mem[((i*L3_CACHELINE))]);
 
 		int fail = 1;
-		//printf("%04ld | 0x%08lx | Px%08lx\t", i, ((i*L3_CACHELINE)), pa);
 		while(fail)
 		{
 			fail = 0;
 			uncore_perfmon_monitor(&u, clflush, (void *)(mem+((i*L3_CACHELINE))), NULL);
-			for (int s = 0; s < (u.num_cbo_ctrs + u.num_arb_ctrs + u.num_fixed_ctrs); ++s)
+			int found_slice_count = 0;
+			for (int s = 0; s < u.num_cbo_ctrs; ++s)
 			{
+				if(((double)u.results[s].total/(double)NUM_SAMPLES) >= 1.0)
+				{
+					slice_map[i] = s;
+					found_slice_count++;
+					//printf("%04ld | 0x%08lx | Px%08lx\t | %d | %lu", i, ((i*L3_CACHELINE)), pa, s, ptos(pa, 2));
+					// if(s != ptos(pa, 2))
+					// {
+					// 	printf(" | WRONG");
+					// }
+					//putchar('\n');
+				}
 				if(((double)u.results[s].total/(double)NUM_SAMPLES) >= 2.0)
 				{
 					fail = 1;
 				}
 			}
-			for (int s = 0; s < u.num_cbo_ctrs; ++s)
+			if(found_slice_count != 1)
 			{
-				if(((double)u.results[s].total/(double)NUM_SAMPLES) >= 1.0)
-				{
-					//printf("%d | %lu\t\n", s, ptos(pa, 2));
-					if(s != ptos(pa, 2))
-					{
-						fail = 1;
-					}
-					slice_map[i] = s;
-				}
+				fail = 1;
 			}
 		}		
+		if(fail == 0 && (ptos(pa, 2) != slice_map[i]))
+		{
+			printf("%ld: %d | %ld | %f | %f | %f | %f | %lu | %lu\n", i, slice_map[i], ptos(pa, 2), ((double)u.results[0].total/(double)NUM_SAMPLES), ((double)u.results[1].total/(double)NUM_SAMPLES), ((double)u.results[2].total/(double)NUM_SAMPLES), ((double)u.results[3].total/(double)NUM_SAMPLES), u.results[slice_map[i]].val_before, u.results[slice_map[i]].val_after);
+			exit(1);
+		}
 	}
 	uncore_perfmon_destroy(&u);				//Destroy measurement util
 }
 
-void print_slice_values(int n_addr, int seq, int len, uint8_t *mem, uint8_t *slice_map)
+void print_slice_values(int n_addr, int seq, int len, uint8_t *mem, uint8_t *slice_map, uint8_t *id_map)
 {
+	unsigned int pid = (unsigned int)getpid();
 	for (uint64_t i = 0; i < n_addr; ++i)
 	{
-		unsigned int pid = (unsigned int)getpid();
 		mem[((i*L3_CACHELINE))] = pid;
 		uint64_t pa = vtop(pid, (uint64_t)&mem[((i*L3_CACHELINE))]);
 
 		if(i % seq == 0)
 		{
-			printf("0x08%lu\t", pa);
+			printf("0x%08lX\t", pa);
 		}
 		printf("%d", slice_map[i]);
 		if(i % 4 == 3)
 			putchar(' ');
 		if(i % seq == seq-1)
-			putchar('\n');
+		{
+			printf(" | 0x%04X\n", id_map[((i+1)/seq)-1]);
+		}
 	}
 	putchar('\n');
 }
 
-#define NUM_ADDRESS 2048
+#define NUM_ADDRESS 4096
 #define SEQ_LEN 64 //length of each sequence
 #define NUM_SEQUENCES (NUM_ADDRESS / SEQ_LEN)
-#define MAX_ID 128
+#define MAX_ID 512
 
 void generate_ids(uint8_t *slice_map, uint8_t *id_map)
 {
@@ -231,27 +241,35 @@ void generate_ids(uint8_t *slice_map, uint8_t *id_map)
 	}
 }
 
+int does_addr_differ_by_one(void *addr1, void *addr2)
+{
+	uint64_t c = (uint64_t)addr1 ^ (uint64_t)addr2;
+
+	if(c == 0)
+		return 0;
+	else if((c & (c-1)) == 0)
+		return 1;
+	else
+		return 0;
+
+}
+
 int main(int argc, char const *argv[])
 {
-	size_t len = (size_t)512ULL * PAGE_SIZE;
+	size_t len = (size_t)2048ULL * PAGE_SIZE * 2;
 	uint8_t *mem = mmap(NULL, sizeof(uint8_t) * len, PROT_READ | PROT_WRITE | PROT_EXEC, MMAP_FLAGS, -1, 0);
 	uint8_t *slice_map = malloc(len/L3_CACHELINE * sizeof(uint8_t)); //32786 slice to addresses with current len
 	uint8_t *id_map = calloc(len/L3_CACHELINE/SEQ_LEN, sizeof(uint8_t)); //512 total sequences
 
 
-	//Get slice values from the perf counter library
+	// //Get slice values from the perf counter library
 	get_slice_values(NUM_ADDRESS, len, mem, slice_map);
-	//Print them
-	print_slice_values(NUM_ADDRESS, SEQ_LEN, len, mem, slice_map);
-	//Each sequence is made up of the slice value for 64 distinct L3 cache lines.
-	//As in the paper, we need to generate an ID to relate each sequence back to the initial sequence, which will have ID 0x0.
+	// //Print them
+	// //Each sequence is made up of the slice value for 64 distinct L3 cache lines.
+	// //As in the paper, we need to generate an ID to relate each sequence back to the initial sequence, which will have ID 0x0.
 	generate_ids(slice_map, id_map);
 
-	for (int i = 0; i < NUM_SEQUENCES; ++i)
-	{
-		printf("%d\n", id_map[i]);
-	}
-	
+	print_slice_values(NUM_ADDRESS, SEQ_LEN, len, mem, slice_map, id_map);	
 
 	/////////////////////////////////////////////////////////
 	/////////////////////////////////////////////////////////

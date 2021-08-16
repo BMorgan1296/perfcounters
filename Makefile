@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS= -O2 -g -fsanitize=address
+CFLAGS= -O2 #-g -fsanitize=address
 .DEFAULT_GOAL := lib
 BUILD_DIR = $(shell pwd)
 
@@ -29,9 +29,8 @@ uncore_address_map: uncore_address_map.c perf_counters.a
 	$(CC) $(CFLAGS) -o $@ $^
 
 uncore_address_map-run: uncore_address_map
-	#echo 0 | sudo tee /proc/sys/vm/nr_hugepages > /dev/null
+	sudo modprobe msr
 	sudo taskset -c 0 ./uncore_address_map
-	#echo 0 | sudo tee /proc/sys/vm/nr_hugepages > /dev/null
 
 test: test_uncore test_pmu uncore_address_map
 

@@ -426,7 +426,8 @@ void uncore_perfmon_monitor(uncore_perfmon_t *u, void (*exe)(void *, void *), vo
 		for (register int s = 0; s < REG_TOTAL_CTRS; ++s)
 		{
 			u->results[s].total = u->results[s].val_after - u->results[s].val_before;
-			if(u->results[s].val_before <= 1000000 || u->results[s].val_after <= 1000000 || (u->results[s].total >> 48) > 0)
+			if((u->results[s].val_after <= u->results[s].val_before) || ((u->results[s].total >> 48) > 0))
+			//if((u->results[s].total >> 48) > 0)
 			{
 				fail = 1;
 			}
