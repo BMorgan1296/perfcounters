@@ -34,7 +34,7 @@
 		#define MSR_UNC_CBO_PERFCTR(CBo,n) (0x700 + (CBo*0x8) + (n+2))
 	#endif
 
-	//ARB Perf Monitoring//
+	//ARB Perf Monitoring// //ARB IS BROKEN, HANGS//
 	#define ARB_MAX_CTR 2
 	#define MSR_UNC_ARB_PERFEVTSEL(ARB) (0x3B2 + ARB)
 	#define MSR_UNC_ARB_PERFCTR(ARB) (0x3B0 + ARB)

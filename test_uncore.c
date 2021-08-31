@@ -80,25 +80,16 @@ int main(int argc, char const *argv[])
 
 	printf("CBo Count: %d\n", num_cbos);
 
-	CBO_COUNTER_INFO_T cbo_ctrs[8] =
-	{		
-		{
-			{0x34, 0x8F, 0, "UNC_CBO_CACHE_LOOKUP.ANY_MESI"},
-			0, (MSR_UNC_CBO_PERFEVT_EN)
-		},
-		{
-			{0x34, 0x8F, 0, "UNC_CBO_CACHE_LOOKUP.ANY_MESI"},
-			1, (MSR_UNC_CBO_PERFEVT_EN)
-		},
-		{
-			{0x34, 0x8F, 0, "UNC_CBO_CACHE_LOOKUP.ANY_MESI"},
-			2, (MSR_UNC_CBO_PERFEVT_EN)
-		},
-		{
-			{0x34, 0x8F, 0, "UNC_CBO_CACHE_LOOKUP.ANY_MESI"},
-			3, (MSR_UNC_CBO_PERFEVT_EN)
-		},
-	};
+	CBO_COUNTER_INFO_T *cbo_ctrs = malloc(num_cbos * sizeof(CBO_COUNTER_INFO_T));
+
+	for (int i = 0; i < num_cbos; ++i)
+	{
+		COUNTER_T temp = {0x34, 0x8F, 0, "UNC_CBO_CACHE_LOOKUP.ANY_MESI"};
+		cbo_ctrs[i].counter = temp;
+		cbo_ctrs[i].cbo = i;
+		cbo_ctrs[i].flags = (MSR_UNC_CBO_PERFEVT_EN);
+	}
+
 
 	COUNTER_INFO_T arb_ctrs[2] = 
 	{
@@ -120,7 +111,7 @@ int main(int argc, char const *argv[])
 		},
 	};
 
-	uncore_perfmon_init(&u, 0, NUM_SAMPLES, 4, 0, 1, cbo_ctrs, arb_ctrs, fixed_ctrs);
+	uncore_perfmon_init(&u, 0, NUM_SAMPLES, num_cbos, 0, 1, cbo_ctrs, arb_ctrs, fixed_ctrs);
 
 	printf("ADDR\t");
 	uncore_perfmon_print_headers_csv(&u);
@@ -133,7 +124,7 @@ int main(int argc, char const *argv[])
 	}
 	
 	uncore_perfmon_destroy(&u);				//Destroy measurement util
-
 	munmap(mem, len * sizeof(uint8_t));
+	free(cbo_ctrs);
 	return 0;
 }
