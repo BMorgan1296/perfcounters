@@ -3,14 +3,17 @@ CFLAGS= -O2 #-g -fsanitize=address
 .DEFAULT_GOAL := lib
 BUILD_DIR = $(shell pwd)
 
+TYPE= INTEL_CORE #INTEL_XEON
+GEN= GEN6
+
 perf_counters_util.o: perf_counters_util.c perf_counters_util.h 
-	$(CC) $(CFLAGS) -c $<
+	$(CC) $(CFLAGS) -c $< -D $(TYPE) -D $(GEN) 
 
 pmu_perfmon.o: pmu_perfmon.c pmu_perfmon.h
-	$(CC) $(CFLAGS) -c $<
+	$(CC) $(CFLAGS) -c $< -D $(TYPE) -D $(GEN) 
 
 uncore_perfmon.o: uncore_perfmon.c uncore_perfmon.h
-	$(CC) $(CFLAGS) -c $<
+	$(CC) $(CFLAGS) -c $< -D $(TYPE) -D $(GEN) 
 
 perf_counters.a: perf_counters_util.o pmu_perfmon.o uncore_perfmon.o
 	ar rcs perf_counters.a perf_counters_util.o pmu_perfmon.o uncore_perfmon.o 

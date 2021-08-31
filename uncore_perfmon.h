@@ -6,17 +6,14 @@
 #ifndef UNCORE_COUNTERS_H
 #define UNCORE_COUNTERS_H
 
-#define INTEL_CORE
-#define INTEL_CORE_6TH_GEN_PLUS
-
 #ifdef INTEL_CORE
 	//Enabling registers (to allow reading and writing in the first place)
-	#ifdef INTEL_CORE_6TH_GEN_PLUS
-		#define MSR_UNC_PERF_GLOBAL_CTRL   0xE01
-		#define MSR_UNC_PERF_GLOBAL_STATUS 0xE02
-	#else
+	#if defined(GEN4) || defined(GEN5)
 		#define MSR_UNC_PERF_GLOBAL_CTRL   0x391
 		#define MSR_UNC_PERF_GLOBAL_STATUS 0x392
+	#elif defined(GEN6) || defined(GEN7) || defined(GEN8) 
+		#define MSR_UNC_PERF_GLOBAL_CTRL   0xE01
+		#define MSR_UNC_PERF_GLOBAL_STATUS 0xE02
 	#endif
 
 	//MSR_UNC_PERF_GLOBAL_CTRL
@@ -25,12 +22,17 @@
 	#define GLOBAL_CTRL_CLEAR (uint64_t)(0)
 	#define MSR_UNC_CTR_DISABLE (uint64_t)(0)
 	#define GLOBAL_CTRL_PMI_CORE_SEL(n) (1 << n) //Can select multiple cores to have a forwarded PMI by using this
-	
+
 	//CBo Perf Monitoring//
-	#define MSR_UNC_CBO_CONFIG 0x396 //Reading returns the number of CBos (subtract one)
-	#define CBO_MAX_CTR 2
-	#define MSR_UNC_CBO_PERFEVTSEL(CBo,n) (0x700 + (CBo*0x10) + n)
-	#define MSR_UNC_CBO_PERFCTR(CBo,n) (0x700 + (CBo*0x10) + (n+6))
+	#define MSR_UNC_CBO_CONFIG 0x396 //Reading returns the number of CBos
+	#define CBO_MAX_CTR 2 //Max amount of counters per CBo
+	#if defined(GEN4) || defined(GEN5) || defined(GEN6) || defined(GEN7) || defined(GEN8)
+		#define MSR_UNC_CBO_PERFEVTSEL(CBo,n) (0x700 + (CBo*0x10) + n)
+		#define MSR_UNC_CBO_PERFCTR(CBo,n) (0x700 + (CBo*0x10) + (n+6))
+	#elif defined(GEN9) || defined(GEN10) || defined(GEN11) //Not 100% sure about 9. Will need to test on a 9th Gen CPU to see if it belongs in above mappings or down here.
+		#define MSR_UNC_CBO_PERFEVTSEL(CBo,n) (0x700 + (CBo*0x8) + n)
+		#define MSR_UNC_CBO_PERFCTR(CBo,n) (0x700 + (CBo*0x8) + (n+2))
+	#endif
 
 	//ARB Perf Monitoring//
 	#define ARB_MAX_CTR 2
@@ -45,8 +47,8 @@
 	#define FIXED_MAX_CTR 1
 	#define MSR_UNC_PERF_FIXED_CTRL 0x394
 	#define MSR_UNC_PERF_FIXED_CTR 0x395 //Uncore clock cycles. Reading from this will give that event value.
-	
-	
+
+
 	//IMC Perf Monitoring//
 	#define IMC_FIXED_CTR_NUM 5
 	
@@ -83,7 +85,7 @@
 	};
 
 #elif defined INTEL_XEON
-//Not implemented
+	//Not implemented
 #endif
 
 #endif //UNCORE_PERFMON_H

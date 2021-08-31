@@ -1,4 +1,8 @@
+#define _GNU_SOURCE
+#include <sched.h>
+
 #include "perf_counters.h"
+
 #include <sys/mman.h>
 #include <stddef.h>
 #include <stdlib.h>
@@ -55,6 +59,17 @@ uint64_t rdmsr1(uint8_t affinity, uint32_t reg)
 
 int main(int argc, char const *argv[])
 {
+	//Setting scheduling to only run on a single core.
+	cpu_set_t mask;			
+	CPU_ZERO(&mask);
+	CPU_SET(0, &mask);
+	int result = sched_setaffinity(0, sizeof(mask), &mask);
+	if(result == -1)
+	{
+		perror("get_slice_values_adj()");
+		exit(1);
+	}
+
 	uncore_perfmon_t u;
 	uint64_t a = 0;
 	uint64_t b = 0;
@@ -62,6 +77,8 @@ int main(int argc, char const *argv[])
 	uint8_t *mem = mmap(NULL, sizeof(uint8_t) * len, PROT_READ | PROT_WRITE | PROT_EXEC, MMAP_FLAGS, -1, 0);
 
 	uint8_t num_cbos = uncore_get_num_cbo();
+
+	printf("CBo Count: %d\n", num_cbos);
 
 	CBO_COUNTER_INFO_T cbo_ctrs[8] =
 	{		

@@ -1,8 +1,12 @@
+#define _GNU_SOURCE
+#include <sched.h>
+
 #include "perf_counters.h"
 
 #include <sys/mman.h>
 #include <stdio.h>
 #include <stddef.h>
+#include <stdlib.h>
 
 #define NUM_SAMPLES 10000000
 #define NUM_CTRS 1
@@ -13,7 +17,7 @@
 	#define MAP_HUGETLB 0x40000 /* arch specific */
 #endif
 
-#define MMAP_FLAGS (MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB)
+#define MMAP_FLAGS (MAP_PRIVATE | MAP_ANONYMOUS)
 #define HUGEPAGEBITS 21
 #define PAGE_SIZE (1<<HUGEPAGEBITS)
 
@@ -43,6 +47,17 @@ void cache_way_finder(uint64_t *buf, uint64_t *num_ways)
 
 int main(int argc, char const *argv[])
 {
+	//Setting scheduling to only run on a single core.
+	cpu_set_t mask;			
+	CPU_ZERO(&mask);
+	CPU_SET(0, &mask);
+	int result = sched_setaffinity(0, sizeof(mask), &mask);
+	if(result == -1)
+	{
+		perror("get_slice_values_adj()");
+		exit(1);
+	}
+	
 	pmu_perfmon_t m;
 	uint64_t a = 0;
 	uint64_t b = 0;
@@ -63,7 +78,7 @@ int main(int argc, char const *argv[])
 
 	pmu_perfmon_init(&m, NUM_SAMPLES, NUM_FIXED_CTRS, FIXED_CTR_FLAGS, NUM_CTRS, counters);
 	printf("L1_ACCESSES\t");
-	pmu_perfmon_print_headers_csv(&m);						//Print the headers as csv (but with tabs)
+	pmu_perfmon_print_headers_csv(&m); //Print the headers as csv (but with tabs)
 	for (uint64_t i = 0; i <= 64; ++i)
 	{
 		pmu_perfmon_monitor(&m, cache_way_finder, (uint64_t*)mem, &i);
