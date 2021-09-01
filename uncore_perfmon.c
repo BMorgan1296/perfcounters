@@ -182,9 +182,9 @@ void uncore_perfmon_print_results_csv(uncore_perfmon_t *u)
 uint8_t uncore_get_num_cbo()
 {
 	int res = 0; 
-	#if defined(GEN4) || defined(GEN5) || defined(GEN6) || defined(GEN7) || defined(GEN8)
+	#if defined(GEN4) || defined(GEN5) || defined(GEN6) || defined(GEN7) || defined(GEN8) || defined(GEN9)
 		res = (uint8_t)rdmsr(0, MSR_UNC_CBO_CONFIG) - 1;
-	#elif defined(GEN9) || defined(GEN10) || defined(GEN11)
+	#elif defined(GEN10) || defined(GEN11)
 		res = (uint8_t)rdmsr(0, MSR_UNC_CBO_CONFIG);
 	#endif
 
