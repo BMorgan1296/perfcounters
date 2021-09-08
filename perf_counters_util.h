@@ -67,7 +67,7 @@ inline uint64_t rdmsr(uint8_t affinity, uint32_t reg)
     fseek( fp, reg, SEEK_SET );
     if(fgets(msr, 8, fp) == NULL)
     {
-        fprintf(stderr, "rdmsr(): fgets() could not read from /dev/cpu/%d/msr, check msr kernel module is inserted\n", affinity);
+	fprintf(stderr, "rdmsr(): fgets() could not read MSR %x from /dev/cpu/%d/msr, check msr kernel module is inserted\n", reg, affinity);
         exit(1);
     }
     for (int i = 0; i < 8; i++)
