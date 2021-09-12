@@ -8,6 +8,7 @@ void wrmsr(uint32_t reg, uint64_t contents)
     snprintf(cmd, 256, "wrmsr -a 0x%08x 0x%016lx", reg, contents);
     if((err = system(cmd)) != 0)
     {
+        fprintf(stderr, "wrmsr(): Could not write to MSR %x, check msr kernel module is inserted\n", reg);
     	perror("wrmsr()");
     	exit(1);
     }

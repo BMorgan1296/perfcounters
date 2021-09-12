@@ -220,16 +220,21 @@ void uncore_perfmon_init(uncore_perfmon_t *u,
 			for (uint8_t uc = 0; uc < u->num_cbo_ctrs; uc++)
 			{
 				int success = 0;
+				//Get the CBo for this counter
 				uint8_t uc_cbo = cbo_ctrs_info[uc].cbo;
+				//If the CBo specified for this counter is out of range of available CBos
 				if(uc_cbo >= n_cbo)
 				{
 					fprintf(stderr, "uncore_perfmon_init(): could not assign counter to CBo, specified CBo out of range (CBo count: %d)\n", n_cbo);
 					exit(1);
 				}
+				//Now go through each ctr in this CBo
 				for (int ctr = 0; ctr < CBO_MAX_CTR; ctr++)
 				{
+					printf("Copying cbo %d ctr %d\n", uc_cbo, ctr);
 					if(u->cbo_ctrs_map[(uc_cbo*CBO_MAX_CTR)+ctr] == 0)
 					{
+						printf("Success\n");
 						//Copy counter to counter map and set map lookup value
 						u->cbo_ctrs_info[(uc_cbo*CBO_MAX_CTR)+ctr] = cbo_ctrs_info[uc];
 						u->cbo_ctrs_map[(uc_cbo*CBO_MAX_CTR)+ctr] = 1;
@@ -239,7 +244,7 @@ void uncore_perfmon_init(uncore_perfmon_t *u,
 				}
 				if(!success)
 				{
-					fprintf(stderr, "uncore_perfmon_init(): could not assign counter to CBo, not enough CBo counter slots (Max: %d)\n", CBO_MAX_CTR);
+					fprintf(stderr, "uncore_perfmon_init(): could not assign counter to CBo %d, not enough CBo counter slots (Max: %d)\n", uc_cbo, CBO_MAX_CTR);
 					exit(1);
 				}
 			}
