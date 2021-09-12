@@ -231,10 +231,8 @@ void uncore_perfmon_init(uncore_perfmon_t *u,
 				//Now go through each ctr in this CBo
 				for (int ctr = 0; ctr < CBO_MAX_CTR; ctr++)
 				{
-					printf("Copying cbo %d ctr %d\n", uc_cbo, ctr);
 					if(u->cbo_ctrs_map[(uc_cbo*CBO_MAX_CTR)+ctr] == 0)
 					{
-						printf("Success\n");
 						//Copy counter to counter map and set map lookup value
 						u->cbo_ctrs_info[(uc_cbo*CBO_MAX_CTR)+ctr] = cbo_ctrs_info[uc];
 						u->cbo_ctrs_map[(uc_cbo*CBO_MAX_CTR)+ctr] = 1;

@@ -78,8 +78,6 @@ int main(int argc, char const *argv[])
 
 	uint8_t num_cbos = uncore_get_num_cbo();
 
-	printf("CBo Count: %d\n", num_cbos);
-
 	CBO_COUNTER_INFO_T *cbo_ctrs = malloc(num_cbos * sizeof(CBO_COUNTER_INFO_T));
 
 	for (int i = 0; i < num_cbos; ++i)

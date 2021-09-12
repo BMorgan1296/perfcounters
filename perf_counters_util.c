@@ -10,7 +10,7 @@ void wrmsr(uint32_t reg, uint64_t contents)
     {
         fprintf(stderr, "wrmsr(): Could not write to MSR %x, check msr kernel module is inserted\n", reg);
     	perror("wrmsr()");
-    	exit(1);
+    	//exit(1);
     }
 }
 

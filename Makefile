@@ -28,7 +28,7 @@ test_uncore: test_uncore.c perf_counters.a
 test_pmu: test_pmu.c perf_counters.a
 	$(CC) $(CFLAGS) -o $@ $^
 
-test: test_uncore test_pmu
+test: clean test_uncore test_pmu
 
 all: lib test 
 
