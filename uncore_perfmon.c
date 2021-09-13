@@ -186,8 +186,9 @@ uint8_t uncore_get_num_cbo(uint8_t affinity)
 		res = (uint8_t)rdmsr(affinity, MSR_UNC_CBO_CONFIG) - 1;
 	#elif defined(GEN9) || defined(GEN10) || defined(GEN11)
 		res = (uint8_t)rdmsr(affinity, MSR_UNC_CBO_CONFIG);
+		
+		//i9 10900K has 10 slices but the MSRs do not allow accessing slices 7,8,9 >:(
 		#if defined(GEN10)
-			//i9 10900K has 10 slices but the MSRs do not allow accessing slices 7,8,9 >:(
 			if(res == 0xa)
 			{
 				res = 7;
@@ -413,7 +414,7 @@ void uncore_perfmon_monitor(uncore_perfmon_t *u, void (*exe)(void *, void *), vo
 		for (register int s = 0; s < *reg_num_fixed_ctrs; ++s)
 			u->results[s + *reg_num_cbo_ctrs + *reg_num_arb_ctrs].val_before = rdmsr(*reg_affinity, MSR_UNC_PERF_FIXED_CTR);
 
-		//Execute the assembled code
+		//Execute the provided function code
 		#pragma GCC unroll 4096
 		for (register int s = 0; s < *reg_samples; ++s)
 		{
@@ -445,9 +446,9 @@ void uncore_perfmon_monitor(uncore_perfmon_t *u, void (*exe)(void *, void *), vo
 		#pragma GCC unroll 4096
 		for (register int s = 0; s < REG_TOTAL_CTRS; ++s)
 		{
+			//Error checking. If counter overflowed (after less than before) or misread (bits greater than 48 are set) then fail.
 			u->results[s].total = u->results[s].val_after - u->results[s].val_before;
 			if((u->results[s].val_after <= u->results[s].val_before) || ((u->results[s].total >> 48) > 0))
-			//if((u->results[s].total >> 48) > 0)
 			{
 				fail = 1;
 			}
@@ -456,6 +457,7 @@ void uncore_perfmon_monitor(uncore_perfmon_t *u, void (*exe)(void *, void *), vo
 }
 
 //For if we want to run two different functions back to back e.g. accessing a list forwards then backwards to minimise cache thrashing
+//TODO
 void uncore_perfmon_monitor2(uncore_perfmon_t *u, void (*exe1)(uint64_t *, uint64_t *), void (*exe2)(uint64_t *, uint64_t *), uint64_t* arg1, uint64_t* arg2)
 {
 	// //We want samples to be in a register so that the execution for loop is quick

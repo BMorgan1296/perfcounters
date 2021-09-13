@@ -183,7 +183,7 @@ void pmu_perfmon_monitor(pmu_perfmon_t *p, void (*exe)(uint64_t *, uint64_t *), 
 	for (register int s = 0; s < *reg_num_ctrs; ++s)
 		rdpmc((PCTR_GENERAL | s), &p->results[s+*reg_num_fixed_ctrs].val_before);
 
-	//Execute the assembled code
+	//Execute the provided function code
 	#pragma GCC unroll 4096
 	for (register int s = 0; s < *reg_samples; ++s)
 	{
@@ -240,7 +240,7 @@ void pmu_perfmon_monitor2(pmu_perfmon_t *p, void (*exe1)(uint64_t *, uint64_t *)
 	for (register int s = 0; s < *reg_num_ctrs; ++s)
 		rdpmc((PCTR_GENERAL | s), &p->results[s+*reg_num_fixed_ctrs].val_before);
 
-	//Execute the assembled code
+	//Execute the provided function code
 	#pragma GCC unroll 4096
 	for (register int s = 0; s < *reg_samples/2; ++s)
 	{
