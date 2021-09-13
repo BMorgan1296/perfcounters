@@ -7,7 +7,7 @@
 #define UNCORE_COUNTERS_H
 
 #ifdef INTEL_CORE
-	//Enabling registers (to allow reading and writing in the first place)
+	//Uncore PMU Enable and Control registers (to allow their use in the first place)
 	#if defined(GEN4) || defined(GEN5)
 		#define MSR_UNC_PERF_GLOBAL_CTRL   0x391
 		#define MSR_UNC_PERF_GLOBAL_STATUS 0x392

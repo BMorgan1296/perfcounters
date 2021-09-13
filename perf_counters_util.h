@@ -62,12 +62,20 @@ inline uint64_t rdmsr(uint8_t affinity, uint32_t reg)
     FILE *fp;
     uint8_t msr[8] = {0};
     uint64_t ret = 0;
+    char file[128] = {0};
 
-    fp = fopen("/dev/cpu/0/msr","r");
+    snprintf(file, 128, "/dev/cpu/%d/msr", affinity);
+
+    fp = fopen(file, "r");
+    if(fp == 0)
+    {
+        fprintf(stderr, "rdmsr(): could not open /dev/cpu/%d/msr, out of range of available processors?\n", affinity);
+        exit(1);
+    }
     fseek( fp, reg, SEEK_SET );
     if(fgets(msr, 8, fp) == NULL)
     {
-        fprintf(stderr, "rdmsr(): fgets() could not read MSR %x from /dev/cpu/%d/msr, check msr kernel module is inserted\n", reg, affinity);
+        fprintf(stderr, "rdmsr(): fgets() could not read MSR 0x%x from /dev/cpu/%d/msr, check msr kernel module is inserted\n", reg, affinity);
         exit(1);
     }
     for (int i = 0; i < 8; i++)

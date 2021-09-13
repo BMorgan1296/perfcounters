@@ -5,7 +5,7 @@
 
 void print_map(uncore_perfmon_t *u)
 {
-	uint8_t n_cbo = uncore_get_num_cbo();
+	uint8_t n_cbo = uncore_get_num_cbo(u->affinity);
 	for (uint8_t cbo = 0; cbo < n_cbo; cbo++)
 	{
 		for (int ctr = 0; ctr < CBO_MAX_CTR; ++ctr)
@@ -48,14 +48,14 @@ void enable_fixed_counter(COUNTER_INFO_T counter_info)
     wrmsr(MSR_UNC_PERF_FIXED_CTRL, value);
 }
 
-void enable_uncore_counters()
+void enable_uncore_counters(uncore_perfmon_t *u)
 {
 	//Disable usage of uncore counters, to clear it all
 	wrmsr(MSR_UNC_PERF_GLOBAL_CTRL, GLOBAL_CTRL_DISABLE);
 	wrmsr(MSR_UNC_PERF_GLOBAL_STATUS, GLOBAL_CTRL_CLEAR);
 
 	//Disable CBos to clear
-	uint8_t n_cbo = uncore_get_num_cbo();
+	uint8_t n_cbo = uncore_get_num_cbo(u->affinity);
 	for (int cbo = 0; cbo < n_cbo; ++cbo)
 	{
 		for (int ctr = 0; ctr < CBO_MAX_CTR; ++ctr)
@@ -76,7 +76,7 @@ void enable_uncore_counters()
 //Initialises counters using wrmsr
 void enable_cbo_counters(uncore_perfmon_t *u)
 {
-	uint8_t n_cbo = uncore_get_num_cbo();
+	uint8_t n_cbo = uncore_get_num_cbo(u->affinity);
 	for (uint8_t cbo = 0; cbo < n_cbo; cbo++)
 	{
 		for (int ctr = 0; ctr < CBO_MAX_CTR; ++ctr)
@@ -151,7 +151,7 @@ void uncore_print_string_from_ctr(COUNTER_T counter, int cbo)
 
 void uncore_perfmon_print_headers_csv(uncore_perfmon_t *u)
 {
-	uint8_t n_cbo = uncore_get_num_cbo();
+	uint8_t n_cbo = uncore_get_num_cbo(u->affinity);
 	for (int i = 0; i < n_cbo * CBO_MAX_CTR; ++i)
 	{
 		if(u->cbo_ctrs_map[i])
@@ -179,13 +179,13 @@ void uncore_perfmon_print_results_csv(uncore_perfmon_t *u)
 	putchar('\n');
 }
 
-uint8_t uncore_get_num_cbo()
+uint8_t uncore_get_num_cbo(uint8_t affinity)
 {
 	int res = 0; 
 	#if defined(GEN4) || defined(GEN5) || defined(GEN6) || defined(GEN7) || defined(GEN8)
-		res = (uint8_t)rdmsr(0, MSR_UNC_CBO_CONFIG) - 1;
+		res = (uint8_t)rdmsr(affinity, MSR_UNC_CBO_CONFIG) - 1;
 	#elif defined(GEN9) || defined(GEN10) || defined(GEN11)
-		res = (uint8_t)rdmsr(0, MSR_UNC_CBO_CONFIG);
+		res = (uint8_t)rdmsr(affinity, MSR_UNC_CBO_CONFIG);
 	#endif
 
 	return res;
@@ -202,6 +202,7 @@ void uncore_perfmon_init(uncore_perfmon_t *u,
 						 COUNTER_INFO_T *fixed_ctrs_info)
 {
 	//Init the static values
+	u->affinity = affinity;
 	u->samples = samples;
 	u->num_cbo_ctrs = num_cbo_ctrs;
 	u->num_arb_ctrs = num_arb_ctrs;
@@ -210,10 +211,10 @@ void uncore_perfmon_init(uncore_perfmon_t *u,
 
 	if(total_ctrs >= 1)
 	{
-		enable_uncore_counters();
+		enable_uncore_counters(u);
 		if(u->num_cbo_ctrs >= 1)
 		{
-			uint8_t n_cbo = uncore_get_num_cbo();
+			uint8_t n_cbo = uncore_get_num_cbo(u->affinity);
 			u->cbo_ctrs_map = calloc(n_cbo * CBO_MAX_CTR, sizeof(uint8_t));
 			u->cbo_ctrs_info = calloc(n_cbo * CBO_MAX_CTR, sizeof(CBO_COUNTER_INFO_T));
 			//Iterate through user specified counters (uc)
@@ -318,6 +319,16 @@ void uncore_perfmon_destroy(uncore_perfmon_t *u)
 
 void uncore_perfmon_read_ctrs(uncore_perfmon_t *u)
 {
+	cpu_set_t mask;			
+	CPU_ZERO(&mask);
+	CPU_SET(u->affinity, &mask);
+	int result = sched_setaffinity(0, sizeof(mask), &mask);
+	if(result == -1)
+	{
+		perror("main()");
+		exit(1);
+	}
+
 	int cpu = sched_getcpu();
 
 	//We want samples to be in a register so that the execution for loop is quick
@@ -351,10 +362,29 @@ void uncore_perfmon_monitor(uncore_perfmon_t *u, void (*exe)(void *, void *), vo
 {
 	uint64_t t1, t2;
 
+	cpu_set_t mask;
 	int cpu = sched_getcpu();
+	if(cpu != u->affinity)
+	{
+
+		CPU_ZERO(&mask);
+		CPU_SET(u->affinity, &mask);
+		int result = sched_setaffinity(0, sizeof(mask), &mask);
+		if(result == -1)
+		{
+			perror("main()");
+			exit(1);
+		}
+		cpu = sched_getcpu();
+		if(cpu != u->affinity)
+		{
+			fprintf(stderr, "uncore_perfmon_monitor(): could not change CPU from %d to %d\n", cpu, u->affinity);
+			exit(1);
+		}
+	}
 
 	register uint8_t fail = 1;
-	register uint8_t n_cbo = uncore_get_num_cbo();
+	register uint8_t n_cbo = uncore_get_num_cbo(u->affinity);
 	register uint8_t *map = u->cbo_ctrs_map;
 
 	//We want samples to be in a register so that the execution for loop is quick

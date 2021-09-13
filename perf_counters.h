@@ -1,3 +1,5 @@
+#define _GNU_SOURCE
+#include <sched.h>
 #include <inttypes.h>
 
 #ifndef PERF_COUNTERS_H
@@ -134,7 +136,7 @@ typedef struct cbo_counter_info
 typedef struct uncore_perfmon
 {
 	////////////////////////////
-	uint8_t affinity;					//current processor core for PMU forwarding (e.g. 0-3)
+	uint8_t affinity;					//processor core to measure uncore counters from. Is agnostic to hyperthreading, i.e. processor 5 will be physical processor 0.
 	int64_t samples; 					//number of samples for the monitor_function	 			
 	uint8_t num_cbo_ctrs; 				//number of counters requested to monitor. Max 4 CBo. Usually 2 counters per CBo.
 	uint8_t num_arb_ctrs; 				//number of counters requested to monitor. Max 1 ARB. Usually 2 counters per ARB.
@@ -148,7 +150,7 @@ typedef struct uncore_perfmon
 	COUNTER_RESULTS_T *results;
 } uncore_perfmon_t;
 
-uint8_t uncore_get_num_cbo(); //Returns the number of CBos reported by MSR_UNC_CBO_CONFIG
+uint8_t uncore_get_num_cbo(uint8_t affinity); //Returns the number of CBos reported by MSR_UNC_CBO_CONFIG (0x396)
 
 void uncore_perfmon_init(uncore_perfmon_t *u, 
 						 uint8_t affinity, 

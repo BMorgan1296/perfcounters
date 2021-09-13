@@ -1,7 +1,7 @@
+#include "perf_counters.h"
+
 #define _GNU_SOURCE
 #include <sched.h>
-
-#include "perf_counters.h"
 
 #include <sys/mman.h>
 #include <stdio.h>
@@ -30,6 +30,8 @@
 
 #define L1_CACHE_SET 0 //Set 0 will be accessed
 
+#define AFFINITY 0
+
 //This will access the same set of the L1 cache - Set 0.
 #define MEM_ACCESS_OFFSET ((L1_STRIDE) + (L1_CACHE_SET * L1_CACHELINE))
 
@@ -50,8 +52,8 @@ int main(int argc, char const *argv[])
 	//Setting scheduling to only run on a single core.
 	cpu_set_t mask;			
 	CPU_ZERO(&mask);
-	CPU_SET(0, &mask);
-	int result = sched_setaffinity(0, sizeof(mask), &mask);
+	CPU_SET(AFFINITY, &mask);
+	int result = sched_setaffinity(AFFINITY, sizeof(mask), &mask);
 	if(result == -1)
 	{
 		perror("get_slice_values_adj()");
