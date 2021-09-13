@@ -1,7 +1,8 @@
 //https://stackoverflow.com/questions/42088515/perf-event-open-how-to-monitoring-multiple-events
 //https://github.com/wcohen/libpfm4
 //http://perfmon2.sourceforge.net/docs_v4.html
-
+#define _GNU_SOURCE
+#include <sched.h>
 #include <inttypes.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -15,7 +16,8 @@
 #endif
 
 //Helper functions
-void wrmsr(uint32_t reg, uint64_t contents);
+void wrmsr(uint8_t affinity, uint32_t reg, uint64_t contents);
+void set_cpu(uint8_t affinity);
 
 void delayloop(uint32_t cycles);
 

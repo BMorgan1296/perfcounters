@@ -1,16 +1,40 @@
 #include "perf_counters_util.h"
 
 //Writes into the given Model Specific Register (MSR) using the msr-tools library.
-void wrmsr(uint32_t reg, uint64_t contents)
+void wrmsr(uint8_t affinity, uint32_t reg, uint64_t contents)
 {
 	int err;
     char cmd[256] = {0};
-    snprintf(cmd, 256, "wrmsr -a 0x%08x 0x%016lx", reg, contents);
+    snprintf(cmd, 256, "wrmsr -p %d 0x%08x 0x%016lx", affinity, reg, contents);
     if((err = system(cmd)) != 0)
     {
         fprintf(stderr, "wrmsr(): Could not write to MSR %x, check msr kernel module is inserted\n", reg);
     	perror("wrmsr()");
-    	//exit(1);
+    	exit(1);
+    }
+}
+
+void set_cpu(uint8_t affinity)
+{
+    cpu_set_t mask;
+    int cpu = sched_getcpu();
+    if(cpu != affinity)
+    {
+
+        CPU_ZERO(&mask);
+        CPU_SET(affinity, &mask);
+        int result = sched_setaffinity(0, sizeof(mask), &mask);
+        if(result == -1)
+        {
+            perror("main()");
+            exit(1);
+        }
+        cpu = sched_getcpu();
+        if(cpu != affinity)
+        {
+            fprintf(stderr, "uncore_perfmon_monitor(): could not change CPU from %d to %d\n", cpu, affinity);
+            exit(1);
+        }
     }
 }
 

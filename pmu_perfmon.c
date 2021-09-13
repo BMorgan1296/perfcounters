@@ -1,44 +1,44 @@
 #include "pmu_perfmon.h"
 
-void enable_general_counter(int num, COUNTER_INFO_T counter_info)
+void enable_general_counter(uint8_t affinity, int num, COUNTER_INFO_T counter_info)
 {
     uint64_t value = 0;
     value = (uint64_t)( (counter_info.counter.cmask << 24) | (counter_info.flags) | (counter_info.counter.umask << 8) | counter_info.counter.event);
-    wrmsr((IA32_PERFEVTSEL0 + num), value);
+    wrmsr(affinity, (IA32_PERFEVTSEL0 + num), value);
 }
 
-void enable_fixed_counters(int num, uint8_t flags)
+void enable_fixed_counters(uint8_t affinity, int num, uint8_t flags)
 {
     uint64_t value = 0;
     for (int i = 0; i < num; ++i)
     {
         value |= (flags << (i * 4));
     }
-    wrmsr(IA32_FIXED_CTR_CTRL, value);
+    wrmsr(affinity, IA32_FIXED_CTR_CTRL, value);
 }
 
 //Initialises counters using wrmsr
 void enable_fixed_and_general_counters(pmu_perfmon_t *p)
 {
     //Enable usage of the counters    
-    wrmsr(IA32_PERF_GLOBAL_CTRL, DISABLE_FIXED_AND_GENERAL);
-    wrmsr(IA32_PMC0, CLEAR_FIXED_OR_GENERAL);
-    wrmsr(IA32_PMC1, CLEAR_FIXED_OR_GENERAL);
-    wrmsr(IA32_PMC2, CLEAR_FIXED_OR_GENERAL);
-    wrmsr(IA32_PMC3, CLEAR_FIXED_OR_GENERAL);
+    wrmsr(p->affinity, IA32_PERF_GLOBAL_CTRL, DISABLE_FIXED_AND_GENERAL);
+    wrmsr(p->affinity, IA32_PMC0, CLEAR_FIXED_OR_GENERAL);
+    wrmsr(p->affinity, IA32_PMC1, CLEAR_FIXED_OR_GENERAL);
+    wrmsr(p->affinity, IA32_PMC2, CLEAR_FIXED_OR_GENERAL);
+    wrmsr(p->affinity, IA32_PMC3, CLEAR_FIXED_OR_GENERAL);
 
-    wrmsr(IA32_FIXED_CTR0, CLEAR_FIXED_OR_GENERAL);
-    wrmsr(IA32_FIXED_CTR1, CLEAR_FIXED_OR_GENERAL);
-    wrmsr(IA32_FIXED_CTR2, CLEAR_FIXED_OR_GENERAL);
+    wrmsr(p->affinity, IA32_FIXED_CTR0, CLEAR_FIXED_OR_GENERAL);
+    wrmsr(p->affinity, IA32_FIXED_CTR1, CLEAR_FIXED_OR_GENERAL);
+    wrmsr(p->affinity, IA32_FIXED_CTR2, CLEAR_FIXED_OR_GENERAL);
 
     for (int i = 0; i < p->num_ctrs; ++i)
     {        
-        enable_general_counter(i, p->counters_info[i]);
+        enable_general_counter(p->affinity, i, p->counters_info[i]);
     }
 
-    enable_fixed_counters(p->num_fixed_ctrs, p->fixed_ctr_flags);
+    enable_fixed_counters(p->affinity, p->num_fixed_ctrs, p->fixed_ctr_flags);
 
-    wrmsr(IA32_PERF_GLOBAL_CTRL, ENABLE_FIXED_AND_GENERAL);
+    wrmsr(p->affinity, IA32_PERF_GLOBAL_CTRL, ENABLE_FIXED_AND_GENERAL);
 }
 
 
@@ -101,9 +101,10 @@ void pmu_perfmon_print_results_csv(pmu_perfmon_t *p)
 }
 
 
-void pmu_perfmon_init(pmu_perfmon_t *p, int64_t samples, uint8_t num_fixed_ctrs, uint8_t fixed_ctr_flags, uint8_t num_ctrs, COUNTER_INFO_T *counters_info)
+void pmu_perfmon_init(pmu_perfmon_t *p, uint8_t affinity, int64_t samples, uint8_t num_fixed_ctrs, uint8_t fixed_ctr_flags, uint8_t num_ctrs, COUNTER_INFO_T *counters_info)
 {
 	//Init the values
+	p->affinity = affinity;
 	p->samples = samples;
 	p->num_fixed_ctrs = num_fixed_ctrs;
 	p->fixed_ctr_flags = fixed_ctr_flags;
@@ -151,6 +152,7 @@ void pmu_perfmon_destroy(pmu_perfmon_t *p)
 
 void pmu_perfmon_monitor(pmu_perfmon_t *p, void (*exe)(uint64_t *, uint64_t *), uint64_t* arg1, uint64_t* arg2)
 {
+	set_cpu(p->affinity);
 	//We want samples to be in a register so that the execution for loop is quick
 	register int64_t *reg_samples = &(p->samples);
 	register uint8_t *reg_num_fixed_ctrs = &(p->num_fixed_ctrs);
@@ -206,6 +208,7 @@ void pmu_perfmon_monitor(pmu_perfmon_t *p, void (*exe)(uint64_t *, uint64_t *), 
 //For if we want to run two different functions back to back e.g. accessing a list forwards then backwards to minimise cache thrashing
 void pmu_perfmon_monitor2(pmu_perfmon_t *p, void (*exe1)(uint64_t *, uint64_t *), void (*exe2)(uint64_t *, uint64_t *), uint64_t* arg1, uint64_t* arg2)
 {
+	set_cpu(p->affinity);
 	//We want samples to be in a register so that the execution for loop is quick
 	register int64_t *reg_samples = &(p->samples);
 	register uint8_t *reg_num_fixed_ctrs = &(p->num_fixed_ctrs);

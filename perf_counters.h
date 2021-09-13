@@ -49,6 +49,7 @@ typedef struct counter_results
 typedef struct pmu_perfmon
 {
 	////////////////////////////
+	uint8_t affinity;		//processor core to measure counters from.
 	int64_t samples; 		//number of samples for the monitor_function
 	uint8_t num_ctrs; 		//number of counters requested to monitor. Usually max 4 with hyperthreading, 8 without.
 	////////////////////////////
@@ -72,7 +73,8 @@ typedef struct pmu_perfmon
 
 //CREATE MEASUREMENT INSTANCE//
 //Init the pmu_perfmon_t once, destroy once.
-void pmu_perfmon_init(pmu_perfmon_t *m, 
+void pmu_perfmon_init(pmu_perfmon_t *m,
+					  uint8_t affinity, 					  
 					  int64_t samples, 
 					  uint8_t num_fixed_ctrs,
 					  uint8_t fixed_ctr_flags,

@@ -17,7 +17,7 @@ void print_map(uncore_perfmon_t *u)
 	putchar('\n');
 }
 
-void enable_cbo_counter(uint32_t msr, CBO_COUNTER_INFO_T counter_info)
+void enable_cbo_counter(uint8_t affinity, uint32_t msr, CBO_COUNTER_INFO_T counter_info)
 {
     uint64_t value = 0;
     value = (uint64_t)( (counter_info.counter.cmask << 24) | (counter_info.flags) | (counter_info.counter.umask << 8) | counter_info.counter.event);
@@ -26,10 +26,10 @@ void enable_cbo_counter(uint32_t msr, CBO_COUNTER_INFO_T counter_info)
     	fprintf(stderr, "enable_cbo_counter(): CMASK too large (Max: 0xF)\n");
     	exit(1);
     }
-    wrmsr(msr, value);
+    wrmsr(affinity, msr, value);
 }
 
-void enable_arb_counter(uint32_t msr, COUNTER_INFO_T counter_info)
+void enable_arb_counter(uint8_t affinity, uint32_t msr, COUNTER_INFO_T counter_info)
 {
     uint64_t value = 0;
     value = (uint64_t)( (counter_info.counter.cmask << 24) | (counter_info.flags) | (counter_info.counter.umask << 8) | counter_info.counter.event);
@@ -38,39 +38,39 @@ void enable_arb_counter(uint32_t msr, COUNTER_INFO_T counter_info)
     	fprintf(stderr, "enable_arb_counter(): CMASK too large (Max: 0xF)\n");
     	exit(1);
     }
-    wrmsr(msr, value);
+    wrmsr(affinity, msr, value);
 }
 
-void enable_fixed_counter(COUNTER_INFO_T counter_info)
+void enable_fixed_counter(uint8_t affinity, COUNTER_INFO_T counter_info)
 {
     uint64_t value = 0;
     value = (uint64_t) (counter_info.flags);
-    wrmsr(MSR_UNC_PERF_FIXED_CTRL, value);
+    wrmsr(affinity, MSR_UNC_PERF_FIXED_CTRL, value);
 }
 
 void enable_uncore_counters(uncore_perfmon_t *u)
 {
 	//Disable usage of uncore counters, to clear it all
-	wrmsr(MSR_UNC_PERF_GLOBAL_CTRL, GLOBAL_CTRL_DISABLE);
-	wrmsr(MSR_UNC_PERF_GLOBAL_STATUS, GLOBAL_CTRL_CLEAR);
+	wrmsr(u->affinity, MSR_UNC_PERF_GLOBAL_CTRL, GLOBAL_CTRL_DISABLE);
+	wrmsr(u->affinity, MSR_UNC_PERF_GLOBAL_STATUS, GLOBAL_CTRL_CLEAR);
 
 	//Disable CBos to clear
 	uint8_t n_cbo = uncore_get_num_cbo(u->affinity);
 	for (int cbo = 0; cbo < n_cbo; ++cbo)
 	{
 		for (int ctr = 0; ctr < CBO_MAX_CTR; ++ctr)
-			wrmsr(MSR_UNC_CBO_PERFEVTSEL(cbo, ctr), MSR_UNC_CTR_DISABLE);
+			wrmsr(u->affinity, MSR_UNC_CBO_PERFEVTSEL(cbo, ctr), MSR_UNC_CTR_DISABLE);
 	}
 
 	//Disable ARB to clear
 	for (int arb = 0; arb < CBO_MAX_CTR; ++arb)
-		wrmsr(MSR_UNC_ARB_PERFEVTSEL(arb), MSR_UNC_CTR_DISABLE);
+		wrmsr(u->affinity, MSR_UNC_ARB_PERFEVTSEL(arb), MSR_UNC_CTR_DISABLE);
 
 	//Disable Fixed to clear
-	wrmsr(MSR_UNC_PERF_FIXED_CTRL, MSR_UNC_CTR_DISABLE);
+	wrmsr(u->affinity, MSR_UNC_PERF_FIXED_CTRL, MSR_UNC_CTR_DISABLE);
 
 	//Enable usage of uncore counters
-	wrmsr(MSR_UNC_PERF_GLOBAL_CTRL, GLOBAL_CTRL_EN);
+	wrmsr(u->affinity, MSR_UNC_PERF_GLOBAL_CTRL, GLOBAL_CTRL_EN);
 }
 
 //Initialises counters using wrmsr
@@ -83,7 +83,7 @@ void enable_cbo_counters(uncore_perfmon_t *u)
 		{
 			if(u->cbo_ctrs_map[(cbo*CBO_MAX_CTR)+ctr] == 1)
 			{
-				enable_cbo_counter(MSR_UNC_CBO_PERFEVTSEL(cbo, ctr), u->cbo_ctrs_info[(cbo*CBO_MAX_CTR)+ctr]);
+				enable_cbo_counter(u->affinity, MSR_UNC_CBO_PERFEVTSEL(cbo, ctr), u->cbo_ctrs_info[(cbo*CBO_MAX_CTR)+ctr]);
 			}
 		}
 	}
@@ -93,7 +93,7 @@ void enable_arb_counters(uncore_perfmon_t *u)
 {
 	for (int arb = 0; arb < u->num_arb_ctrs; ++arb)
 	{
-		enable_arb_counter(MSR_UNC_ARB_PERFEVTSEL(arb), u->arb_ctrs_info[arb]);
+		enable_arb_counter(u->affinity, MSR_UNC_ARB_PERFEVTSEL(arb), u->arb_ctrs_info[arb]);
 	}
 }
 
@@ -101,7 +101,7 @@ void enable_fixed_counters(uncore_perfmon_t *u)
 {
 	for (int i = 0; i < u->num_fixed_ctrs; ++i)
 	{
-		enable_fixed_counter(u->fixed_ctrs_info[i]);
+		enable_fixed_counter(u->affinity, u->fixed_ctrs_info[i]);
 	}
 }
 
@@ -319,19 +319,10 @@ void uncore_perfmon_destroy(uncore_perfmon_t *u)
 
 void uncore_perfmon_read_ctrs(uncore_perfmon_t *u)
 {
-	cpu_set_t mask;			
-	CPU_ZERO(&mask);
-	CPU_SET(u->affinity, &mask);
-	int result = sched_setaffinity(0, sizeof(mask), &mask);
-	if(result == -1)
-	{
-		perror("main()");
-		exit(1);
-	}
-
-	int cpu = sched_getcpu();
+	set_cpu(u->affinity);
 
 	//We want samples to be in a register so that the execution for loop is quick
+	register uint8_t *reg_affinity = &(u->affinity);
 	register int64_t *reg_samples = &(u->samples);
 	register uint8_t *reg_num_cbo_ctrs = &(u->num_cbo_ctrs);
 	register uint8_t *reg_num_arb_ctrs = &(u->num_arb_ctrs);
@@ -349,45 +340,27 @@ void uncore_perfmon_read_ctrs(uncore_perfmon_t *u)
 
 	#pragma GCC unroll 4096
 	for (register int s = 0; s < *reg_num_cbo_ctrs; ++s)
-		u->results[s].total = rdmsr(cpu, MSR_UNC_CBO_PERFCTR(u->cbo_ctrs_info->cbo, s % CBO_MAX_CTR));	
+		u->results[s].total = rdmsr(*reg_affinity, MSR_UNC_CBO_PERFCTR(u->cbo_ctrs_info->cbo, s % CBO_MAX_CTR));	
 	#pragma GCC unroll 4096
 	for (register int s = 0; s < *reg_num_arb_ctrs; ++s)
-		u->results[s + *reg_num_cbo_ctrs].total = rdmsr(cpu, MSR_UNC_ARB_PERFCTR(s));
+		u->results[s + *reg_num_cbo_ctrs].total = rdmsr(*reg_affinity, MSR_UNC_ARB_PERFCTR(s));
 	#pragma GCC unroll 4096
 	for (register int s = 0; s < *reg_num_fixed_ctrs; ++s)
-		u->results[s + *reg_num_cbo_ctrs + *reg_num_arb_ctrs].total = rdmsr(cpu, MSR_UNC_PERF_FIXED_CTR);
+		u->results[s + *reg_num_cbo_ctrs + *reg_num_arb_ctrs].total = rdmsr(*reg_affinity, MSR_UNC_PERF_FIXED_CTR);
 }
 
 void uncore_perfmon_monitor(uncore_perfmon_t *u, void (*exe)(void *, void *), void* arg1, void* arg2)
 {
 	uint64_t t1, t2;
-
-	cpu_set_t mask;
-	int cpu = sched_getcpu();
-	if(cpu != u->affinity)
-	{
-
-		CPU_ZERO(&mask);
-		CPU_SET(u->affinity, &mask);
-		int result = sched_setaffinity(0, sizeof(mask), &mask);
-		if(result == -1)
-		{
-			perror("main()");
-			exit(1);
-		}
-		cpu = sched_getcpu();
-		if(cpu != u->affinity)
-		{
-			fprintf(stderr, "uncore_perfmon_monitor(): could not change CPU from %d to %d\n", cpu, u->affinity);
-			exit(1);
-		}
-	}
+	
+	set_cpu(u->affinity);
 
 	register uint8_t fail = 1;
 	register uint8_t n_cbo = uncore_get_num_cbo(u->affinity);
 	register uint8_t *map = u->cbo_ctrs_map;
 
 	//We want samples to be in a register so that the execution for loop is quick
+	register uint8_t *reg_affinity = &(u->affinity);
 	register int64_t *reg_samples = &(u->samples);
 	register uint8_t *reg_num_cbo_ctrs = &(u->num_cbo_ctrs);
 	register uint8_t *reg_num_arb_ctrs = &(u->num_arb_ctrs);
@@ -420,18 +393,18 @@ void uncore_perfmon_monitor(uncore_perfmon_t *u, void (*exe)(void *, void *), vo
 		{
 			if(map[s])
 			{
-				u->results[c].val_before = rdmsr(cpu, MSR_UNC_CBO_PERFCTR(u->cbo_ctrs_info[s].cbo, s % CBO_MAX_CTR));
+				u->results[c].val_before = rdmsr(*reg_affinity, MSR_UNC_CBO_PERFCTR(u->cbo_ctrs_info[s].cbo, s % CBO_MAX_CTR));
 				c++;
 			}
 		}
 		#pragma GCC unroll 4096
 		for (register int s = 0; s < *reg_num_arb_ctrs; ++s)
 		{
-			u->results[s + *reg_num_cbo_ctrs].val_before = rdmsr(cpu, MSR_UNC_ARB_PERFCTR(s));
+			u->results[s + *reg_num_cbo_ctrs].val_before = rdmsr(*reg_affinity, MSR_UNC_ARB_PERFCTR(s));
 		}
 		#pragma GCC unroll 4096
 		for (register int s = 0; s < *reg_num_fixed_ctrs; ++s)
-			u->results[s + *reg_num_cbo_ctrs + *reg_num_arb_ctrs].val_before = rdmsr(cpu, MSR_UNC_PERF_FIXED_CTR);
+			u->results[s + *reg_num_cbo_ctrs + *reg_num_arb_ctrs].val_before = rdmsr(*reg_affinity, MSR_UNC_PERF_FIXED_CTR);
 
 		//Execute the assembled code
 		#pragma GCC unroll 4096
@@ -446,19 +419,19 @@ void uncore_perfmon_monitor(uncore_perfmon_t *u, void (*exe)(void *, void *), vo
 		{
 			if(map[s])
 			{
-				u->results[c].val_after = rdmsr(cpu, MSR_UNC_CBO_PERFCTR(u->cbo_ctrs_info[s].cbo, s % CBO_MAX_CTR));
+				u->results[c].val_after = rdmsr(*reg_affinity, MSR_UNC_CBO_PERFCTR(u->cbo_ctrs_info[s].cbo, s % CBO_MAX_CTR));
 				c++;
 			}
 		}
 		#pragma GCC unroll 4096
 		for (register int s = 0; s < *reg_num_arb_ctrs; ++s)
 		{
-			u->results[s + *reg_num_cbo_ctrs].val_after = rdmsr(cpu, MSR_UNC_ARB_PERFCTR(s));
+			u->results[s + *reg_num_cbo_ctrs].val_after = rdmsr(*reg_affinity, MSR_UNC_ARB_PERFCTR(s));
 		}
 		#pragma GCC unroll 4096
 		for (register int s = 0; s < *reg_num_fixed_ctrs; ++s)
 		{
-			u->results[s + *reg_num_cbo_ctrs + *reg_num_arb_ctrs].val_after = rdmsr(cpu, MSR_UNC_PERF_FIXED_CTR);
+			u->results[s + *reg_num_cbo_ctrs + *reg_num_arb_ctrs].val_after = rdmsr(*reg_affinity, MSR_UNC_PERF_FIXED_CTR);
 		}
 
 		//Collect results

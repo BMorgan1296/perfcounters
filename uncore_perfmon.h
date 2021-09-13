@@ -1,8 +1,6 @@
 #include "perf_counters.h"
 #include "perf_counters_util.h"
 
-#include <sched.h>
-
 #ifndef UNCORE_COUNTERS_H
 #define UNCORE_COUNTERS_H
 

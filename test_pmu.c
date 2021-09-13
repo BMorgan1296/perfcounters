@@ -78,7 +78,7 @@ int main(int argc, char const *argv[])
 		},
 	};
 
-	pmu_perfmon_init(&m, NUM_SAMPLES, NUM_FIXED_CTRS, FIXED_CTR_FLAGS, NUM_CTRS, counters);
+	pmu_perfmon_init(&m, AFFINITY, NUM_SAMPLES, NUM_FIXED_CTRS, FIXED_CTR_FLAGS, NUM_CTRS, counters);
 	printf("L1_ACCESSES\t");
 	pmu_perfmon_print_headers_csv(&m); //Print the headers as csv (but with tabs)
 	for (uint64_t i = 0; i <= 64; ++i)
