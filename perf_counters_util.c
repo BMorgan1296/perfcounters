@@ -16,6 +16,11 @@ void wrmsr(uint8_t affinity, uint32_t reg, uint64_t contents)
 
 void set_cpu(uint8_t affinity)
 {
+    int num_proc = (int)sysconf(_SC_NPROCESSORS_ONLN);
+    if(affinity > num_proc)
+    {
+        fprintf(stderr, "set_cpu(): Affinity %d greater than available CPU cores (%d)\n", affinity, num_proc);
+    }
     cpu_set_t mask;
     int cpu = sched_getcpu();
     if(cpu != affinity)
@@ -32,7 +37,7 @@ void set_cpu(uint8_t affinity)
         cpu = sched_getcpu();
         if(cpu != affinity)
         {
-            fprintf(stderr, "uncore_perfmon_monitor(): could not change CPU from %d to %d\n", cpu, affinity);
+            fprintf(stderr, "set_cpu(): could not change CPU from %d to %d\n", cpu, affinity);
             exit(1);
         }
     }

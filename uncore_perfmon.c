@@ -1,5 +1,3 @@
-#define _GNU_SOURCE
-
 #include <string.h>
 #include "uncore_perfmon.h"
 
@@ -17,13 +15,13 @@ void print_map(uncore_perfmon_t *u)
 	putchar('\n');
 }
 
-void enable_cbo_counter(uint8_t affinity, uint32_t msr, CBO_COUNTER_INFO_T counter_info)
+void uncore_enable_cbo_counter(uint8_t affinity, uint32_t msr, CBO_COUNTER_INFO_T counter_info)
 {
     uint64_t value = 0;
     value = (uint64_t)( (counter_info.counter.cmask << 24) | (counter_info.flags) | (counter_info.counter.umask << 8) | counter_info.counter.event);
     if(counter_info.counter.cmask > 0xF)
     {
-    	fprintf(stderr, "enable_cbo_counter(): CMASK too large (Max: 0xF)\n");
+    	fprintf(stderr, "uncore_enable_cbo_counter(): CMASK too large (Max: 0xF)\n");
     	exit(1);
     }
     wrmsr(affinity, msr, value);
@@ -41,14 +39,14 @@ void enable_arb_counter(uint8_t affinity, uint32_t msr, COUNTER_INFO_T counter_i
     wrmsr(affinity, msr, value);
 }
 
-void enable_fixed_counter(uint8_t affinity, COUNTER_INFO_T counter_info)
+void uncore_enable_fixed_counter(uint8_t affinity, COUNTER_INFO_T counter_info)
 {
     uint64_t value = 0;
     value = (uint64_t) (counter_info.flags);
     wrmsr(affinity, MSR_UNC_PERF_FIXED_CTRL, value);
 }
 
-void enable_uncore_counters(uncore_perfmon_t *u)
+void uncore_enable_counters(uncore_perfmon_t *u)
 {
 	//Disable usage of uncore counters, to clear it all
 	wrmsr(u->affinity, MSR_UNC_PERF_GLOBAL_CTRL, GLOBAL_CTRL_DISABLE);
@@ -74,7 +72,7 @@ void enable_uncore_counters(uncore_perfmon_t *u)
 }
 
 //Initialises counters using wrmsr
-void enable_cbo_counters(uncore_perfmon_t *u)
+void uncore_enable_cbo_counters(uncore_perfmon_t *u)
 {
 	uint8_t n_cbo = uncore_get_num_cbo(u->affinity);
 	for (uint8_t cbo = 0; cbo < n_cbo; cbo++)
@@ -83,13 +81,13 @@ void enable_cbo_counters(uncore_perfmon_t *u)
 		{
 			if(u->cbo_ctrs_map[(cbo*CBO_MAX_CTR)+ctr] == 1)
 			{
-				enable_cbo_counter(u->affinity, MSR_UNC_CBO_PERFEVTSEL(cbo, ctr), u->cbo_ctrs_info[(cbo*CBO_MAX_CTR)+ctr]);
+				uncore_enable_cbo_counter(u->affinity, MSR_UNC_CBO_PERFEVTSEL(cbo, ctr), u->cbo_ctrs_info[(cbo*CBO_MAX_CTR)+ctr]);
 			}
 		}
 	}
 }
 
-void enable_arb_counters(uncore_perfmon_t *u)
+void uncore_enable_arb_counters(uncore_perfmon_t *u)
 {
 	for (int arb = 0; arb < u->num_arb_ctrs; ++arb)
 	{
@@ -97,11 +95,11 @@ void enable_arb_counters(uncore_perfmon_t *u)
 	}
 }
 
-void enable_fixed_counters(uncore_perfmon_t *u)
+void uncore_enable_fixed_counters(uncore_perfmon_t *u)
 {
 	for (int i = 0; i < u->num_fixed_ctrs; ++i)
 	{
-		enable_fixed_counter(u->affinity, u->fixed_ctrs_info[i]);
+		uncore_enable_fixed_counter(u->affinity, u->fixed_ctrs_info[i]);
 	}
 }
 
@@ -219,7 +217,7 @@ void uncore_perfmon_init(uncore_perfmon_t *u,
 
 	if(total_ctrs >= 1)
 	{
-		enable_uncore_counters(u);
+		uncore_enable_counters(u);
 		if(u->num_cbo_ctrs >= 1)
 		{
 			uint8_t n_cbo = uncore_get_num_cbo(u->affinity);
@@ -255,7 +253,7 @@ void uncore_perfmon_init(uncore_perfmon_t *u,
 					exit(1);
 				}
 			}
-			enable_cbo_counters(u);
+			uncore_enable_cbo_counters(u);
 		}		
 		if(u->num_arb_ctrs >= 1)
 		{
@@ -267,7 +265,7 @@ void uncore_perfmon_init(uncore_perfmon_t *u,
 			u->arb_ctrs_info = calloc(u->num_arb_ctrs, sizeof(COUNTER_INFO_T));
 			for (int ctr = 0; ctr < u->num_arb_ctrs; ++ctr)
 				u->arb_ctrs_info[ctr] = arb_ctrs_info[ctr];
-			enable_arb_counters(u);
+			uncore_enable_arb_counters(u);
 		}
 		if(u->num_fixed_ctrs >= 1)
 		{
@@ -279,7 +277,7 @@ void uncore_perfmon_init(uncore_perfmon_t *u,
 			u->fixed_ctrs_info = calloc(u->num_fixed_ctrs, sizeof(COUNTER_INFO_T));
 			for (int ctr = 0; ctr < u->num_fixed_ctrs; ++ctr)
 				u->fixed_ctrs_info[ctr] = fixed_ctrs_info[ctr];
-			enable_fixed_counters(u);
+			uncore_enable_fixed_counters(u);
 		}
 
 		//Measurement vars for averaging each counter

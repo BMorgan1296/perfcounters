@@ -1,13 +1,13 @@
 #include "pmu_perfmon.h"
 
-void enable_general_counter(uint8_t affinity, int num, COUNTER_INFO_T counter_info)
+void pmu_enable_general_counter(uint8_t affinity, int num, COUNTER_INFO_T counter_info)
 {
     uint64_t value = 0;
     value = (uint64_t)( (counter_info.counter.cmask << 24) | (counter_info.flags) | (counter_info.counter.umask << 8) | counter_info.counter.event);
     wrmsr(affinity, (IA32_PERFEVTSEL0 + num), value);
 }
 
-void enable_fixed_counters(uint8_t affinity, int num, uint8_t flags)
+void pmu_enable_fixed_counters(uint8_t affinity, int num, uint8_t flags)
 {
     uint64_t value = 0;
     for (int i = 0; i < num; ++i)
@@ -18,7 +18,7 @@ void enable_fixed_counters(uint8_t affinity, int num, uint8_t flags)
 }
 
 //Initialises counters using wrmsr
-void enable_fixed_and_general_counters(pmu_perfmon_t *p)
+void pmu_enable_fixed_and_general_counters(pmu_perfmon_t *p)
 {
     //Enable usage of the counters    
     wrmsr(p->affinity, IA32_PERF_GLOBAL_CTRL, DISABLE_FIXED_AND_GENERAL);
@@ -33,10 +33,10 @@ void enable_fixed_and_general_counters(pmu_perfmon_t *p)
 
     for (int i = 0; i < p->num_ctrs; ++i)
     {        
-        enable_general_counter(p->affinity, i, p->counters_info[i]);
+        pmu_enable_general_counter(p->affinity, i, p->counters_info[i]);
     }
 
-    enable_fixed_counters(p->affinity, p->num_fixed_ctrs, p->fixed_ctr_flags);
+    pmu_enable_fixed_counters(p->affinity, p->num_fixed_ctrs, p->fixed_ctr_flags);
 
     wrmsr(p->affinity, IA32_PERF_GLOBAL_CTRL, ENABLE_FIXED_AND_GENERAL);
 }
@@ -124,7 +124,7 @@ void pmu_perfmon_init(pmu_perfmon_t *p, uint8_t affinity, int64_t samples, uint8
 			p->results[i].min = -1;
 
 		//Setup perf monitoring
-		enable_fixed_and_general_counters(p);
+		pmu_enable_fixed_and_general_counters(p);
 	}
 	else
 	{

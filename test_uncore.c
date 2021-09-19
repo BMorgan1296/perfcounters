@@ -40,7 +40,7 @@ int main(int argc, char const *argv[])
 	uint64_t a = 0;
 	uint64_t b = 0;
 	size_t len = (size_t)512ULL * PAGE_SIZE;
-	uint8_t *mem = mmap(NULL, sizeof(uint8_t) * len, PROT_READ | PROT_WRITE | PROT_EXEC, MMAP_FLAGS, -1, 0);
+	uint8_t *mem = mmap(NULL, sizeof(uint8_t) * len, PROT_READ | PROT_WRITE, MMAP_FLAGS, -1, 0);
 
 
 	COUNTER_INFO_T arb_ctrs[2] = 
