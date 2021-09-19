@@ -22,14 +22,14 @@ void set_cpu(uint8_t affinity);
 
 void delayloop(uint32_t cycles);
 
-inline void cpuid() 
+inline void cpuid(uint32_t *eax, uint32_t *ebx, uint32_t *ecx, uint32_t *edx)
 {
-	uint32_t eax;
-	uint32_t ebx;
-	uint32_t ecx;
-	uint32_t edx;
-	asm volatile ("cpuid": "+a" (eax), "+b" (ebx), "+c" (ecx), "+d" (edx));
-	return;
+	__asm__ __volatile__ ("cpuid " :
+                      "=a" (*eax),
+                      "=b" (*ebx),
+                      "=c" (*ecx),
+                      "=d" (*edx)
+                      : "a" (1), "c" (0));
 }
 
 inline uint64_t rdtscp64() {
