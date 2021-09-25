@@ -3,8 +3,7 @@ CFLAGS= -O2 $(OPS) #-g -fsanitize=address
 .DEFAULT_GOAL := lib
 BUILD_DIR = $(shell pwd)
 
-# TYPE= INTEL_CORE #INTEL_XEON
-# GEN= GEN6
+
 
 perf_counters_util.o: perf_counters_util.c perf_counters_util.h 
 	$(CC) $(CFLAGS) -c $<
@@ -20,7 +19,8 @@ perf_counters.a: perf_counters_util.o pmu_perfmon.o uncore_perfmon.o
 
 lib: perf_counters.a 
 	sudo cp perf_counters.h /usr/local/include/
-	sudo cp perf_counters.a /usr/local/lib/
+	sudo cp perf_counters_util.h /usr/local/include/
+	sudo cp perf_counters.a /usr/local/lib/libperf_counters.a
 
 #TESTS#
 test_uncore: test_uncore.c perf_counters.a
