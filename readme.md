@@ -1,4 +1,4 @@
-# x86 Performance Counter Interface
+# x86_64 Performance Counter Interface
 
 ## Introduction
 
