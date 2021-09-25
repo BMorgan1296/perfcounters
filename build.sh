@@ -41,4 +41,4 @@ echo $TYPE
 echo $GEN
 echo "Compiling..."
 
-make OPS="-D$TYPE -D$GEN"
+make all OPS="-D$TYPE -D$GEN"

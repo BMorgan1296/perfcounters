@@ -1,8 +1,8 @@
 CC=gcc
-CFLAGS= -O2 $(OPS) #-g -fsanitize=address
+CFLAGS= -O2 $(OPS) -I/usr/local/include #-g -fsanitize=address
 .DEFAULT_GOAL := lib
 BUILD_DIR = $(shell pwd)
-
+LDFLAGS += -lperf_counters
 
 
 perf_counters_util.o: perf_counters_util.c perf_counters_util.h 
@@ -23,16 +23,16 @@ lib: perf_counters.a
 	sudo cp perf_counters.a /usr/local/lib/libperf_counters.a
 
 #TESTS#
-test_uncore: test_uncore.c perf_counters.a
-	$(CC) $(CFLAGS) -o $@ $^
+test_uncore: test_uncore.c
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
-test_pmu: test_pmu.c perf_counters.a
-	$(CC) $(CFLAGS) -o $@ $^
+test_pmu: test_pmu.c
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
-test: clean test_uncore test_pmu
+test: test_uncore test_pmu
 
-all: lib test 
+all: clean lib test 
 
 clean:
 	rm -rf *.o *.a test_uncore test_pmu
-	sudo rm /usr/local/include/perf_counters.h /usr/local/lib/perf_counters.a
+	sudo rm -f /usr/local/include/perf_counters.h /usr/local/include/perf_counters_util.h /usr/local/lib/libperf_counters.a
