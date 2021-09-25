@@ -1,25 +1,26 @@
 CC=gcc
-CFLAGS= -O2 #-g -fsanitize=address
+CFLAGS= -O2 $(OPS) #-g -fsanitize=address
 .DEFAULT_GOAL := lib
 BUILD_DIR = $(shell pwd)
 
-TYPE= INTEL_CORE #INTEL_XEON
-GEN= GEN6
+# TYPE= INTEL_CORE #INTEL_XEON
+# GEN= GEN6
 
 perf_counters_util.o: perf_counters_util.c perf_counters_util.h 
-	$(CC) $(CFLAGS) -c $< -D $(TYPE) -D $(GEN) 
+	$(CC) $(CFLAGS) -c $<
 
 pmu_perfmon.o: pmu_perfmon.c pmu_perfmon.h
-	$(CC) $(CFLAGS) -c $< -D $(TYPE) -D $(GEN) 
+	$(CC) $(CFLAGS) -c $<
 
 uncore_perfmon.o: uncore_perfmon.c uncore_perfmon.h
-	$(CC) $(CFLAGS) -c $< -D $(TYPE) -D $(GEN) 
+	$(CC) $(CFLAGS) -c $<
 
 perf_counters.a: perf_counters_util.o pmu_perfmon.o uncore_perfmon.o
 	ar rcs perf_counters.a perf_counters_util.o pmu_perfmon.o uncore_perfmon.o 
 
 lib: perf_counters.a 
-	#cp perf_counters.h /usr/local/include/perf_counters.h
+	sudo cp perf_counters.h /usr/local/include/
+	sudo cp perf_counters.a /usr/local/lib/
 
 #TESTS#
 test_uncore: test_uncore.c perf_counters.a
@@ -34,3 +35,4 @@ all: lib test
 
 clean:
 	rm -rf *.o *.a test_uncore test_pmu
+	sudo rm /usr/local/include/perf_counters.h /usr/local/lib/perf_counters.a
