@@ -3,7 +3,7 @@
 #Install kernel dependencies
 echo "Updating kernel tools"
 sudo apt-get update
-sudo apt-get install linux-tools-common linux-tools-generic linux-tools-`uname -r`
+sudo apt-get install build-essential linux-tools-common linux-tools-generic linux-tools-`uname -r`
 
 #Get the user_rdpmc dependency
 git submodule init
