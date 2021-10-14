@@ -3,7 +3,8 @@
 #Install kernel dependencies
 echo "Updating kernel tools"
 sudo apt-get update
-sudo apt-get install build-essential linux-tools-common linux-tools-generic linux-tools-`uname -r` -y
+sudo apt-get install build-essential linux-tools-common linux-tools-generic linux-tools-`uname -r` git msr-tools -y
+sudo modprobe msr
 
 #Get the user_rdpmc dependency
 git submodule init
@@ -42,3 +43,5 @@ echo $GEN
 echo "Compiling..."
 
 make all OPS="-D$TYPE -D$GEN"
+
+echo "Test with 'sudo ./test_pmu' and 'sudo ./test_uncore'"
