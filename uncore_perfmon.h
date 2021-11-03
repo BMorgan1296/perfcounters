@@ -6,7 +6,7 @@
 
 #ifdef INTEL_CORE
 	//Uncore PMU Enable and Control registers (to allow their use in the first place)
-	#if defined(GEN4) || defined(GEN5)
+	#if defined(GEN2) ||defined(GEN3) ||defined(GEN4) || defined(GEN5)
 		#define MSR_UNC_PERF_GLOBAL_CTRL   0x391
 		#define MSR_UNC_PERF_GLOBAL_STATUS 0x392
 	#elif defined(GEN6) || defined(GEN7) || defined(GEN8) || defined(GEN9) || defined(GEN10) || defined(GEN11)
@@ -24,7 +24,7 @@
 	//CBo Perf Monitoring//
 	#define MSR_UNC_CBO_CONFIG 0x396 //Reading returns the number of CBos
 	#define CBO_MAX_CTR 2 //Max amount of counters per CBo
-	#if defined(GEN4) || defined(GEN5) || defined(GEN6) || defined(GEN7) || defined(GEN8) || defined(GEN9) || defined(GEN10)
+	#if defined(GEN2) ||defined(GEN3) ||defined(GEN4) || defined(GEN5) || defined(GEN6) || defined(GEN7) || defined(GEN8) || defined(GEN9) || defined(GEN10)
 		#define MSR_UNC_CBO_PERFEVTSEL(CBo,n) (0x700 + (CBo*0x10) + n)
 		#define MSR_UNC_CBO_PERFCTR(CBo,n) (0x700 + (CBo*0x10) + (n+6))
 	#elif defined(GEN11)
