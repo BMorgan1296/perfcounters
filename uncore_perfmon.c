@@ -217,7 +217,6 @@ void uncore_perfmon_init(uncore_perfmon_t *u,
 
 	if(total_ctrs >= 1)
 	{
-		uncore_enable_counters(u);
 		if(u->num_cbo_ctrs >= 1)
 		{
 			uint8_t n_cbo = uncore_get_num_cbo(u->affinity);
@@ -253,7 +252,6 @@ void uncore_perfmon_init(uncore_perfmon_t *u,
 					exit(1);
 				}
 			}
-			uncore_enable_cbo_counters(u);
 		}		
 		if(u->num_arb_ctrs >= 1)
 		{
@@ -265,7 +263,6 @@ void uncore_perfmon_init(uncore_perfmon_t *u,
 			u->arb_ctrs_info = calloc(u->num_arb_ctrs, sizeof(COUNTER_INFO_T));
 			for (int ctr = 0; ctr < u->num_arb_ctrs; ++ctr)
 				u->arb_ctrs_info[ctr] = arb_ctrs_info[ctr];
-			uncore_enable_arb_counters(u);
 		}
 		if(u->num_fixed_ctrs >= 1)
 		{
@@ -277,7 +274,6 @@ void uncore_perfmon_init(uncore_perfmon_t *u,
 			u->fixed_ctrs_info = calloc(u->num_fixed_ctrs, sizeof(COUNTER_INFO_T));
 			for (int ctr = 0; ctr < u->num_fixed_ctrs; ++ctr)
 				u->fixed_ctrs_info[ctr] = fixed_ctrs_info[ctr];
-			uncore_enable_fixed_counters(u);
 		}
 
 		//Measurement vars for averaging each counter
@@ -292,6 +288,22 @@ void uncore_perfmon_init(uncore_perfmon_t *u,
 	{
 		fprintf(stderr, "uncore_perfmon_init(): num_ctrs should be greater than 0\n");
 		exit(1);
+	}
+}
+
+void uncore_enable_all_counters(uncore_perfmon_t *u)
+{
+	uint32_t total_ctrs = (u->num_cbo_ctrs + u->num_arb_ctrs + u->num_fixed_ctrs);
+
+	if(total_ctrs >= 1)
+	{
+		uncore_enable_counters(u);
+		if(u->num_cbo_ctrs >= 1)
+			uncore_enable_cbo_counters(u);
+		if(u->num_arb_ctrs >= 1)
+			uncore_enable_arb_counters(u);
+		if(u->num_fixed_ctrs >= 1)
+			uncore_enable_fixed_counters(u);
 	}
 }
 

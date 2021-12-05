@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <sys/sysinfo.h>
 
 #ifndef PERF_COUNTERS_UTIL_H
 #define PERF_COUNTERS_UTIL_H
