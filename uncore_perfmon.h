@@ -6,12 +6,15 @@
 
 #ifdef INTEL_CORE
 	//Uncore PMU Enable and Control registers (to allow their use in the first place)
-	#if defined(GEN2) ||defined(GEN3) ||defined(GEN4) || defined(GEN5)
+	#if defined (GEN2) ||defined(GEN3) ||defined(GEN4) || defined(GEN5)
 		#define MSR_UNC_PERF_GLOBAL_CTRL   0x391
 		#define MSR_UNC_PERF_GLOBAL_STATUS 0x392
-	#elif defined(GEN6) || defined(GEN7) || defined(GEN8) || defined(GEN9) || defined(GEN10) || defined(GEN11) || defined (GEN12)
+	#elif defined (GEN6) || defined(GEN7) || defined(GEN8) || defined(GEN9) || defined(GEN10) || defined(GEN11)
 		#define MSR_UNC_PERF_GLOBAL_CTRL   0xE01
 		#define MSR_UNC_PERF_GLOBAL_STATUS 0xE02
+	#elif defined (GEN12)
+		#define MSR_UNC_PERF_GLOBAL_CTRL   0x2FF0
+		#define MSR_UNC_PERF_GLOBAL_STATUS 0x2FF2
 	#endif
 
 	//MSR_UNC_PERF_GLOBAL_CTRL
@@ -22,20 +25,30 @@
 	#define GLOBAL_CTRL_PMI_CORE_SEL(n) (1 << n) //Can select multiple cores to have a forwarded PMI by using this
 
 	//CBo Perf Monitoring//
-	#define MSR_UNC_CBO_CONFIG 0x396 //Reading returns the number of CBos
+	#define MSR_UNC_CBO_CONFIG 0x396 //Reading returns the number of CBos, 3:0
 	#define CBO_MAX_CTR 2 //Max amount of counters per CBo
-	#if defined(GEN2) ||defined(GEN3) ||defined(GEN4) || defined(GEN5) || defined(GEN6) || defined(GEN7) || defined(GEN8) || defined(GEN9) || defined(GEN10)
+	#if defined (GEN2) || defined(GEN3) ||defined(GEN4) || defined(GEN5) || defined(GEN6) || defined(GEN7) || defined(GEN8) || defined(GEN9) || defined(GEN10)
 		#define MSR_UNC_CBO_PERFEVTSEL(CBo,n) (0x700 + (CBo*0x10) + n)
 		#define MSR_UNC_CBO_PERFCTR(CBo,n) (0x700 + (CBo*0x10) + (n+6))
-	#elif defined(GEN11) || defined (GEN12)
+	#elif defined (GEN11)
 		#define MSR_UNC_CBO_PERFEVTSEL(CBo,n) (0x700 + (CBo*0x8) + n)
 		#define MSR_UNC_CBO_PERFCTR(CBo,n) (0x700 + (CBo*0x8) + (n+2))
+	#elif defined (GEN12)
+		#define MSR_UNC_CBO_PERFEVTSEL(CBo,n) (0x2000 + (CBo*0x8) + n)
+		#define MSR_UNC_CBO_PERFCTR(CBo,n) (0x2000 + (CBo*0x8) + (n+2))
 	#endif
 
 	//ARB Perf Monitoring// //ARB IS BROKEN, HANGS//
 	#define ARB_MAX_CTR 2
-	#define MSR_UNC_ARB_PERFEVTSEL(ARB) (0x3B2 + ARB)
-	#define MSR_UNC_ARB_PERFCTR(ARB) (0x3B0 + ARB)
+	#if defined (GEN2) || defined(GEN3) ||defined(GEN4) || defined(GEN5) || defined(GEN6) || defined(GEN7) || defined(GEN8) || defined(GEN9) || defined(GEN10) || defined(GEN11)
+		#define MSR_UNC_ARB_PERFEVTSEL(ARB) (0x3B2 + ARB)
+		#define MSR_UNC_ARB_PERFCTR(ARB) (0x3B0 + ARB)
+	#elif defined (GEN12)
+		#define MSR_UNC_ARB_PERFEVTSEL(ARB) (0x2FD0 + (ARB*0x8))
+		#define MSR_UNC_ARB_PERFCTR(ARB) (0x2FD0 + (ARB*0x8) + 2)
+		#define MSR_UNC_ARB_PERF_STATUS(ARB) (0x2FD0 + (ARB*0x8 + 4)
+		#define MSR_UNC_ARB_PERF_CTRL(ARB) (0x2FD0 + (ARB*0x8) + 5)
+	#endif
 
 	//CBo and ARB CTR Mask. Bitwise & with this to clear bits
 	#define MSR_CBO_ARB_MASK (uint64_t)(0x0FFFFFFFFFFF)
@@ -43,8 +56,13 @@
 
 	//Fixed uncore counter MSRs//
 	#define FIXED_MAX_CTR 1
-	#define MSR_UNC_PERF_FIXED_CTRL 0x394
-	#define MSR_UNC_PERF_FIXED_CTR 0x395 //Uncore clock cycles. Reading from this will give that event value.
+	#if defined (GEN2) || defined(GEN3) ||defined(GEN4) || defined(GEN5) || defined(GEN6) || defined(GEN7) || defined(GEN8) || defined(GEN9) || defined(GEN10) || defined(GEN11)
+		#define MSR_UNC_PERF_FIXED_CTRL 0x394
+		#define MSR_UNC_PERF_FIXED_CTR  0x395 //Uncore clock cycles. Reading from this will give that event value.
+	#elif defined (GEN12)
+		#define MSR_UNC_PERF_FIXED_CTRL 0x2FDE
+		#define MSR_UNC_PERF_FIXED_CTR  0x2FDF
+	#endif
 
 
 	//IMC Perf Monitoring//

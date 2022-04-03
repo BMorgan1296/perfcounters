@@ -36,13 +36,13 @@
 #define MEM_ACCESS_OFFSET ((L1_STRIDE) + (L1_CACHE_SET * L1_CACHELINE))
 
 //Access set 0 in l1 num_ways times and then look at perf counters
-void cache_way_finder(uint64_t *buf, uint64_t *num_ways)
+void cache_way_finder(void *buf, void *num_ways)
 {
 	//put num_ways and i into register
 	register uint64_t *p = num_ways; 
 	for (register uint64_t i = 0; i < *p; ++i)
 	{
-		buf[MEM_ACCESS_OFFSET*i] += 1; //read value and write to it
+		*(uint64_t *)(buf+(MEM_ACCESS_OFFSET*i)) += 1; //read value and write to it
 	}
 	return;
 }

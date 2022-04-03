@@ -16,7 +16,7 @@ void wrmsr(uint8_t affinity, uint32_t reg, uint64_t contents)
 
 void set_cpu(uint8_t affinity)
 {
-    int num_proc = (int)get_nprocs_conf();;
+    int num_proc = (int)get_nprocs_conf();
     if(affinity > num_proc)
     {
         fprintf(stderr, "set_cpu(): Affinity %d greater than available CPU cores (%d)\n", affinity, num_proc);

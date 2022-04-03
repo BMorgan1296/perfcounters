@@ -17,6 +17,7 @@ uncore_perfmon.o: uncore_perfmon.c uncore_perfmon.h
 perf_counters.a: perf_counters_util.o pmu_perfmon.o uncore_perfmon.o
 	ar rcs perf_counters.a perf_counters_util.o pmu_perfmon.o uncore_perfmon.o 
 
+#Move the library files into the local include folder for other projects to use
 lib: perf_counters.a 
 	sudo cp perf_counters.h /usr/local/include/
 	sudo cp perf_counters_util.h /usr/local/include/
@@ -29,13 +30,10 @@ test_uncore: test_uncore.c
 test_pmu: test_pmu.c
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
-test_pmu_offcore_rsp: test_pmu_offcore_rsp.c
-	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
-
-test: test_uncore test_pmu test_pmu_offcore_rsp
+test: test_uncore test_pmu
 
 all: clean lib test 
 
 clean:
-	#rm -rf *.o *.a test_uncore test_pmu
+	rm -rf *.o *.a test_uncore test_pmu
 	sudo rm -f /usr/local/include/perf_counters.h /usr/local/include/perf_counters_util.h /usr/local/lib/libperf_counters.a
