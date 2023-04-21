@@ -182,7 +182,7 @@ uint8_t uncore_get_num_cbo(uint8_t affinity)
 	int res = 0; 
 	#if defined(GEN2) || defined(GEN3) || defined(GEN4) || defined(GEN5) || defined(GEN6) || defined(GEN7) || defined(GEN8)
 		res = (uint8_t)rdmsr(affinity, MSR_UNC_CBO_CONFIG) - 1;
-	#elif defined(GEN9) || defined(GEN10) || defined(GEN11) || defined (GEN12)
+	#elif defined(GEN9) || defined(GEN10) || defined(GEN11) || defined (GEN12) || defined (GEN13)
 		res = (uint8_t)rdmsr(affinity, MSR_UNC_CBO_CONFIG);
 		
 		//i9 10900K has 10 slices but the MSRs do not allow accessing slices 7,8,9 >:(
