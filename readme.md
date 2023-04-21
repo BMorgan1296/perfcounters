@@ -2,7 +2,7 @@
 
 ## Introduction
 
-Provides a C interface for measuring the performance of code. 
+Provides a C interface for measuring the performance of code on Intel processors.
 
 Includes a per-core Performance Monitor Unit (PMU) interface as well as an uncore interface.
 

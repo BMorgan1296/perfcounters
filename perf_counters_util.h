@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/sysinfo.h>
+#include <fcntl.h>
 
 #ifndef PERF_COUNTERS_UTIL_H
 #define PERF_COUNTERS_UTIL_H
@@ -63,31 +64,26 @@ inline void rdpmc(uint32_t counter, uint64_t *result)
 
 inline uint64_t rdmsr(uint8_t affinity, uint32_t reg)
 {
-    FILE *fp;
-    uint8_t msr[8] = {0};
-    uint64_t ret = 0;
+    int fp;
+    uint64_t msr_data = 0;
     char file[128] = {0};
 
     snprintf(file, 128, "/dev/cpu/%d/msr", affinity);
 
-    fp = fopen(file, "r");
-    if(fp == 0)
+    fp = open(file, O_RDONLY);
+    if(fp < 0)
     {
         fprintf(stderr, "rdmsr(): could not open /dev/cpu/%d/msr, out of range of available processors?\n", affinity);
         exit(1);
     }
-    fseek( fp, reg, SEEK_SET );
-    if(fgets(msr, 8, fp) == NULL)
+
+    if(pread(fp, &msr_data, sizeof(msr_data), reg) != sizeof(msr_data))
     {
         fprintf(stderr, "rdmsr(): fgets() could not read MSR 0x%x from /dev/cpu/%d/msr, check msr kernel module is inserted\n", reg, affinity);
         exit(1);
     }
-    for (int i = 0; i < 8; i++)
-    {
-        ret |= (uint64_t)msr[i] << (i * 8);
-    }
-    fclose(fp);
-    return ret;
+    close(fp);
+    return msr_data;
 }
 
 #endif //PERF_COUNTERS_UTIL_H
