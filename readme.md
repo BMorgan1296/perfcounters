@@ -22,5 +22,11 @@ Pretty simple. If it doesn't work, please make an issue or send a message. Secur
 
 The above installs some dependencies and a custom kernel module, then parses your Intel processor model and type (Core or Xeon) to compile the project properly. This is due to some of the Model Specific Registers (MSRs) changing between processor models, so it accounts for this.
 
+Alternatively one can use the following to just run the makefile for your Intel processor model, without building the `user_rdpmc` repo or pulling any updates.
+
+`sudo ./install.sh`
+
+
+
 ## To Do
 Xeon processors haven't been implemented as I don't have one. TBA!
