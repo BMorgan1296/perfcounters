@@ -9,7 +9,7 @@
 	#if defined(GEN2) ||defined(GEN3) ||defined(GEN4) || defined(GEN5)
 		#define MSR_UNC_PERF_GLOBAL_CTRL   0x391
 		#define MSR_UNC_PERF_GLOBAL_STATUS 0x392
-	#elif defined(GEN6) || defined(GEN7) || defined(GEN8) || defined(GEN9) || defined(GEN10) || defined(GEN11) || defined (GEN12) || defined (GEN13)
+	#elif defined(GEN6) || defined(GEN7) || defined(GEN8) || defined(GEN9) || defined(GEN10) || defined(GEN11) || defined (GEN12)
 		#define MSR_UNC_PERF_GLOBAL_CTRL   0xE01
 		#define MSR_UNC_PERF_GLOBAL_STATUS 0xE02
 	#endif
@@ -27,7 +27,7 @@
 	#if defined(GEN2) ||defined(GEN3) ||defined(GEN4) || defined(GEN5) || defined(GEN6) || defined(GEN7) || defined(GEN8) || defined(GEN9) || defined(GEN10)
 		#define MSR_UNC_CBO_PERFEVTSEL(CBo,n) (0x700 + (CBo*0x10) + n)
 		#define MSR_UNC_CBO_PERFCTR(CBo,n) (0x700 + (CBo*0x10) + (n+6))
-	#elif defined(GEN11) || defined (GEN12) || defined (GEN13)
+	#elif defined(GEN11) || defined (GEN12)
 		#define MSR_UNC_CBO_PERFEVTSEL(CBo,n) (0x700 + (CBo*0x8) + n)
 		#define MSR_UNC_CBO_PERFCTR(CBo,n) (0x700 + (CBo*0x8) + (n+2))
 	#endif
