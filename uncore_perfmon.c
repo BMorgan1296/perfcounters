@@ -63,7 +63,6 @@ void uncore_enable_counters(uncore_perfmon_t *u)
 	//Disable ARB to clear
 	for (int arb = 0; arb < CBO_MAX_CTR; ++arb)
 		wrmsr(u->affinity, MSR_UNC_ARB_PERFEVTSEL(arb), MSR_UNC_CTR_DISABLE);
-
 	//Disable Fixed to clear
 	wrmsr(u->affinity, MSR_UNC_PERF_FIXED_CTRL, MSR_UNC_CTR_DISABLE);
 
@@ -150,19 +149,28 @@ void uncore_print_string_from_ctr(COUNTER_T counter, int cbo)
 void uncore_perfmon_print_headers_csv(uncore_perfmon_t *u)
 {
 	uint8_t n_cbo = uncore_get_num_cbo(u->affinity);
-	for (int i = 0; i < n_cbo * CBO_MAX_CTR; ++i)
+	if(u->num_cbo_ctrs >= 1)
 	{
-		if(u->cbo_ctrs_map[i])
-			uncore_print_string_from_ctr(u->cbo_ctrs_info[i].counter, u->cbo_ctrs_info[i].cbo);
+		for (int i = 0; i < n_cbo * CBO_MAX_CTR; ++i)
+		{
+			if(u->cbo_ctrs_map[i] == 1)
+				uncore_print_string_from_ctr(u->cbo_ctrs_info[i].counter, u->cbo_ctrs_info[i].cbo);
+		}	
+	}
+	if(u->num_arb_ctrs >= 1)
+	{
+		for (int i = 0; i < u->num_arb_ctrs; ++i)
+		{	
+			uncore_print_string_from_ctr(u->arb_ctrs_info[i].counter, -1);
+		}
+	}
+	if(u->num_fixed_ctrs >= 1)
+	{
+		for (int i = 0; i < u->num_fixed_ctrs; ++i)
+		{
+			uncore_print_string_from_ctr(u->fixed_ctrs_info[i].counter, -1);
+		}
 	}	
-	for (int i = 0; i < u->num_arb_ctrs; ++i)
-	{
-		uncore_print_string_from_ctr(u->arb_ctrs_info[i].counter, -1);
-	}
-	for (int i = 0; i < u->num_fixed_ctrs; ++i)
-	{
-		uncore_print_string_from_ctr(u->fixed_ctrs_info[i].counter, -1);
-	}
 	putchar('\n');	
 }
 
@@ -182,7 +190,7 @@ uint8_t uncore_get_num_cbo(uint8_t affinity)
 	int res = 0; 
 	#if defined(GEN2) || defined(GEN3) || defined(GEN4) || defined(GEN5) || defined(GEN6) || defined(GEN7) || defined(GEN8)
 		res = (uint8_t)rdmsr(affinity, MSR_UNC_CBO_CONFIG) - 1;
-	#elif defined(GEN9) || defined(GEN10) || defined(GEN11) || defined (GEN12)
+	#elif defined(GEN9) || defined(GEN10) || defined(GEN11) || defined (GEN12) || defined (GEN13)
 		res = (uint8_t)rdmsr(affinity, MSR_UNC_CBO_CONFIG);
 		
 		//i9 10900K has 10 slices but the MSRs do not allow accessing slices 7,8,9 >:(
@@ -217,11 +225,10 @@ void uncore_perfmon_init(uncore_perfmon_t *u,
 
 	if(total_ctrs >= 1)
 	{
-		uncore_enable_counters(u);
 		if(u->num_cbo_ctrs >= 1)
 		{
 			uint8_t n_cbo = uncore_get_num_cbo(u->affinity);
-			u->cbo_ctrs_map = calloc(n_cbo * CBO_MAX_CTR, sizeof(uint8_t));
+			u->cbo_ctrs_map = calloc(n_cbo * CBO_MAX_CTR, sizeof(uint8_t));			
 			u->cbo_ctrs_info = calloc(n_cbo * CBO_MAX_CTR, sizeof(CBO_COUNTER_INFO_T));
 			//Iterate through user specified counters (uc)
 			for (uint8_t uc = 0; uc < u->num_cbo_ctrs; uc++)
@@ -253,7 +260,6 @@ void uncore_perfmon_init(uncore_perfmon_t *u,
 					exit(1);
 				}
 			}
-			uncore_enable_cbo_counters(u);
 		}		
 		if(u->num_arb_ctrs >= 1)
 		{
@@ -265,7 +271,6 @@ void uncore_perfmon_init(uncore_perfmon_t *u,
 			u->arb_ctrs_info = calloc(u->num_arb_ctrs, sizeof(COUNTER_INFO_T));
 			for (int ctr = 0; ctr < u->num_arb_ctrs; ++ctr)
 				u->arb_ctrs_info[ctr] = arb_ctrs_info[ctr];
-			uncore_enable_arb_counters(u);
 		}
 		if(u->num_fixed_ctrs >= 1)
 		{
@@ -277,7 +282,6 @@ void uncore_perfmon_init(uncore_perfmon_t *u,
 			u->fixed_ctrs_info = calloc(u->num_fixed_ctrs, sizeof(COUNTER_INFO_T));
 			for (int ctr = 0; ctr < u->num_fixed_ctrs; ++ctr)
 				u->fixed_ctrs_info[ctr] = fixed_ctrs_info[ctr];
-			uncore_enable_fixed_counters(u);
 		}
 
 		//Measurement vars for averaging each counter
@@ -292,6 +296,22 @@ void uncore_perfmon_init(uncore_perfmon_t *u,
 	{
 		fprintf(stderr, "uncore_perfmon_init(): num_ctrs should be greater than 0\n");
 		exit(1);
+	}
+}
+
+void uncore_enable_all_counters(uncore_perfmon_t *u)
+{
+	uint32_t total_ctrs = (u->num_cbo_ctrs + u->num_arb_ctrs + u->num_fixed_ctrs);
+
+	if(total_ctrs >= 1)
+	{
+		uncore_enable_counters(u);
+		if(u->num_cbo_ctrs >= 1)
+			uncore_enable_cbo_counters(u);
+		if(u->num_arb_ctrs >= 1)
+			uncore_enable_arb_counters(u);
+		if(u->num_fixed_ctrs >= 1)
+			uncore_enable_fixed_counters(u);
 	}
 }
 
@@ -397,7 +417,7 @@ void uncore_perfmon_monitor(uncore_perfmon_t *u, void (*exe)(void *, void *), vo
 		#pragma GCC unroll 4096
 		for (register int s = 0, c = 0; s < n_cbo * CBO_MAX_CTR; ++s)
 		{
-			if(map[s])
+			if(*reg_num_cbo_ctrs && map[s])
 			{
 				u->results[c].val_before = rdmsr(*reg_affinity, MSR_UNC_CBO_PERFCTR(u->cbo_ctrs_info[s].cbo, s % CBO_MAX_CTR));
 				c++;
@@ -423,7 +443,7 @@ void uncore_perfmon_monitor(uncore_perfmon_t *u, void (*exe)(void *, void *), vo
 		#pragma GCC unroll 4096
 		for (register int s = 0, c = 0; s < n_cbo * CBO_MAX_CTR; ++s)
 		{
-			if(map[s])
+			if(*reg_num_cbo_ctrs && map[s])
 			{
 				u->results[c].val_after = rdmsr(*reg_affinity, MSR_UNC_CBO_PERFCTR(u->cbo_ctrs_info[s].cbo, s % CBO_MAX_CTR));
 				c++;
@@ -444,7 +464,7 @@ void uncore_perfmon_monitor(uncore_perfmon_t *u, void (*exe)(void *, void *), vo
 		#pragma GCC unroll 4096
 		for (register int s = 0; s < REG_TOTAL_CTRS; ++s)
 		{
-			//Error checking. If counter overflowed (after less than before) or misread (bits greater than 48 are set) then fail.
+			//Error checking. If counter overflowed (current less than initial measurement) or misread (bits greater than 48 are set) then fail.
 			u->results[s].total = u->results[s].val_after - u->results[s].val_before;
 			if((u->results[s].val_after <= u->results[s].val_before) || ((u->results[s].total >> 48) > 0))
 			{

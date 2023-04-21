@@ -133,6 +133,11 @@ void pmu_perfmon_init(pmu_perfmon_t *p, uint8_t affinity, int64_t samples, uint8
 	}
 }
 
+void pmu_msr_offcore_rspx_set(pmu_perfmon_t *p, uint32_t msr_offcore_rspx, uint64_t msr_options)
+{
+	wrmsr(p->affinity, msr_offcore_rspx, msr_options);
+}
+
 void pmu_perfmon_change_samples(pmu_perfmon_t *p, int64_t samples)
 {
 	if(p->samples > 0)
@@ -150,7 +155,7 @@ void pmu_perfmon_destroy(pmu_perfmon_t *p)
 	free(p->results);
 }
 
-void pmu_perfmon_monitor(pmu_perfmon_t *p, void (*exe)(uint64_t *, uint64_t *), uint64_t* arg1, uint64_t* arg2)
+void pmu_perfmon_monitor(pmu_perfmon_t *p, void (*exe)(void *, void *), void* arg1, void* arg2)
 {
 	set_cpu(p->affinity);
 	//We want samples to be in a register so that the execution for loop is quick

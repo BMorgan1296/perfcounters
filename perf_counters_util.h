@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <sys/sysinfo.h>
 #include <fcntl.h>
 
 #ifndef PERF_COUNTERS_UTIL_H
@@ -30,7 +31,7 @@ inline void cpuid(uint32_t *eax, uint32_t *ebx, uint32_t *ecx, uint32_t *edx)
                       "=b" (*ebx),
                       "=c" (*ecx),
                       "=d" (*edx)
-                      : "a" (1), "c" (0));
+                      : "a" (*eax), "c" (*ecx));
 }
 
 inline uint64_t rdtscp64() {

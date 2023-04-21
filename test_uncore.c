@@ -19,15 +19,15 @@
 #define L1_CACHE_SET 0 
 #define MEM_ACCESS_OFFSET ((L1_STRIDE) + (L1_CACHE_SET * L1_CACHELINE))
 
-void cache_way_finder(void *buf, void *num_ways)
-{
-	register uint64_t *p = num_ways; 
-	for (register uint64_t i = 0; i < *p; ++i)
-	{
-		((uint64_t*)buf)[MEM_ACCESS_OFFSET*i] += 1;
-	}
-	return;
-}
+// void cache_way_finder(void *buf, void *num_ways)
+// {
+// 	register uint64_t *p = num_ways; 
+// 	for (register uint64_t i = 0; i < *p; ++i)
+// 	{
+// 		((uint64_t*)buf)[MEM_ACCESS_OFFSET*i] += 1;
+// 	}
+// 	return;
+// }
 
 void clflush(void *v, void *v1) 
 {
@@ -66,7 +66,7 @@ int main(int argc, char const *argv[])
 	//Get number of processors to run the following code on.
 	int num_proc = (int)sysconf(_SC_NPROCESSORS_ONLN);
 
-	for (int c = 0; c < num_proc; ++c)
+	for (int c = 0; c < 1/*num_proc*/; ++c)
 	{
 		printf("Trying on processor %d\n", c);
 
@@ -82,7 +82,10 @@ int main(int argc, char const *argv[])
 			cbo_ctrs[i].flags = (MSR_UNC_CBO_PERFEVT_EN);
 		}
 
+		//uncore_perfmon_init(&u, c, NUM_SAMPLES, 0, 0, 1, NULL, NULL, fixed_ctrs);
 		uncore_perfmon_init(&u, c, NUM_SAMPLES, num_cbos, 0, 1, cbo_ctrs, arb_ctrs, fixed_ctrs);
+
+		uncore_enable_all_counters(&u);
 
 		printf("ADDR\t");
 		uncore_perfmon_print_headers_csv(&u);

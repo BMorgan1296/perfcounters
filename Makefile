@@ -17,6 +17,7 @@ uncore_perfmon.o: uncore_perfmon.c uncore_perfmon.h
 perf_counters.a: perf_counters_util.o pmu_perfmon.o uncore_perfmon.o
 	ar rcs perf_counters.a perf_counters_util.o pmu_perfmon.o uncore_perfmon.o 
 
+#Move the library files into the local include folder for other projects to use
 lib: perf_counters.a 
 	sudo cp perf_counters.h /usr/local/include/
 	sudo cp perf_counters_util.h /usr/local/include/
