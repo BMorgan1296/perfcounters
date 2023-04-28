@@ -8,7 +8,7 @@ sudo modprobe msr
 
 #Get the user_rdpmc dependency
 git submodule init
-git submodule update
+git submodule update --recursive --remote
 
 echo "Building RDPMC kernel module"
 #build the CR4 bit switching kernel module
