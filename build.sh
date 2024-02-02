@@ -21,6 +21,6 @@ echo $TYPE
 echo $GEN
 echo "Compiling..."
 
-make all OPS="-D$TYPE -D$GEN"
+make -j8 all OPS="-D$TYPE -D$GEN"
 
 echo "Test with 'sudo ./test_pmu' and 'sudo ./test_uncore'"

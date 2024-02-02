@@ -8,9 +8,9 @@
 #include <stddef.h>
 #include <stdlib.h>
 
-#define NUM_SAMPLES 10000000
-#define NUM_CTRS 1
-#define NUM_FIXED_CTRS 3
+#define NUM_SAMPLES 100000
+#define NUM_CTRS 4
+#define NUM_FIXED_CTRS 0
 #define FIXED_CTR_FLAGS IA32_FIXED_BOTH
 
 #ifndef MAP_HUGETLB
@@ -22,18 +22,41 @@
 #define PAGE_SIZE (1<<HUGEPAGEBITS)
 
 //Change these values to suit your L1D cache.
-#define L1D 32768
-#define L1_SETS 64
-#define L1_ASSOCIATIVITY 8 //we are trying to find this
-#define L1_CACHELINE 64
-#define L1_STRIDE (L1_CACHELINE * L1_SETS)
+#define L1D 49152
+#define L1D_SETS 64
+#define L1D_ASSOCIATIVITY 12 //we are trying to find this
+#define CACHELINE 64
+#define L1D_STRIDE (CACHELINE * L1D_SETS)
 
-#define L1_CACHE_SET 0 //Set 0 will be accessed
+#define L2D 1310720
+#define L2_SETS 2048
+#define L2_ASSOCIATIVITY 10 //we are trying to find this
+#define L2_CACHELINE 64
+#define L2_STRIDE (L2_CACHELINE * L2_SETS)
+
+#define CACHE_SET 0 //Set 0 will be accessed
 
 #define AFFINITY 0
 
-//This will access the same set of the L1 cache - Set 0.
-#define MEM_ACCESS_OFFSET ((L1_STRIDE) + (L1_CACHE_SET * L1_CACHELINE))
+inline int memaccess(void *v)
+{
+    int rv = 0;
+    asm volatile("mov (%1), %0": "+r" (rv): "r" (v):);
+    return rv;
+}
+
+inline void clflush(void *p)
+{
+    asm volatile("clflush 0(%0)" : : "c"(p) : "rax");
+}
+
+inline void serializing_cpuid()
+{
+    asm volatile (
+    "xor %%eax, %%eax\n"
+    "cpuid"
+    : : : "eax", "ebx", "ecx", "edx");
+}
 
 //Access set 0 in l1 num_ways times and then look at perf counters
 void cache_way_finder(void *buf, void *num_ways)
@@ -42,7 +65,10 @@ void cache_way_finder(void *buf, void *num_ways)
 	register uint64_t *p = num_ways; 
 	for (register uint64_t i = 0; i < *p; ++i)
 	{
-		*(uint64_t *)(buf+(MEM_ACCESS_OFFSET*i)) += 1; //read value and write to it
+		*(uint64_t *)(buf+(L2_STRIDE*i)) += 1; //read value and write to it
+
+		//memaccess((void *)(buf + (L2_STRIDE*i)));
+		asm volatile("mfence\nlfence\n");
 	}
 	return;
 }
@@ -66,21 +92,49 @@ int main(int argc, char const *argv[])
 	size_t len = (size_t)512ULL * PAGE_SIZE; //512 normal 4kb pages
 	uint8_t *mem = mmap(NULL, sizeof(uint8_t) * len, PROT_READ | PROT_WRITE, MMAP_FLAGS, -1, 0);
 
+	//Creating a linked list for L1 evictions
+	void *curr_address = 0;
+	void *next_address = 0;
+	for (int addr_offset = 0; addr_offset < L1D_STRIDE; addr_offset += CACHELINE)
+	{
+	    curr_address = mem + (addr_offset % L1D_STRIDE);            
+	    for (int i = 0; i < L1D_ASSOCIATIVITY * 100; ++i)
+	    {
+	       next_address = (void *)((uintptr_t)mem + ((i+1) * L1D_STRIDE) + (addr_offset % L1D_STRIDE));
+	       *((void **)curr_address) = next_address;
+
+	       curr_address = next_address;
+	    }
+	}
+	*((void **)curr_address) = NULL;
+
 	/////////////////////////////////////////////////////////
 	//////////////// Pay Attention To Below /////////////////
 	/////////////////////////////////////////////////////////
 
 	COUNTER_INFO_T counters[NUM_CTRS] = 
-	{ 
+	{
 		{
-			{0xF1, 0x1F, 0, "L2_LINES_IN.ALL"},
+			{0xD1, 0x01, 0, "MEM_LOAD_RETIRED.L1_HIT"},
+			(IA32_PERFEVT_OS | IA32_PERFEVT_USR | IA32_PERFEVT_EN)
+		},
+		{
+			{0xD1, 0x02, 0, "MEM_LOAD_RETIRED.L2_HIT"},
+			(IA32_PERFEVT_OS | IA32_PERFEVT_USR | IA32_PERFEVT_EN)
+		},
+		{
+			{0x25, 0x1F, 0, "L2_LINES_IN.ALL"},
+			(IA32_PERFEVT_OS | IA32_PERFEVT_USR | IA32_PERFEVT_EN)
+		},
+		{
+			{0x24, 0xFF, 0, "L2_RQSTS.REFERENCES"},
 			(IA32_PERFEVT_OS | IA32_PERFEVT_USR | IA32_PERFEVT_EN)
 		},
 	};
 
 	pmu_perfmon_init(&m, AFFINITY, NUM_SAMPLES, NUM_FIXED_CTRS, FIXED_CTR_FLAGS, NUM_CTRS, counters);
 	pmu_enable_fixed_and_general_counters(&m);
-	printf("L1_ACCESSES\t");
+	printf("L2_STRIDE_ACCESSES\t");
 	pmu_perfmon_print_headers_csv(&m); //Print the headers as csv (but with tabs)
 	for (uint64_t i = 0; i <= 64; ++i)
 	{
