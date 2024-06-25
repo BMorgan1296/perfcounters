@@ -88,7 +88,7 @@ void pmu_perfmon_print_headers_csv(pmu_perfmon_t *p)
 		printf("%s\t", str);
 		//printf("%s\tmin_%d\tmax_%d\t", str, i, i);
 	}
-	putchar('\n');	
+	putchar('\n');
 }
 
 void pmu_perfmon_print_results_csv(pmu_perfmon_t *p)

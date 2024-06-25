@@ -4,7 +4,6 @@ CFLAGS= -O3 $(OPS) -I/usr/local/include -g #-fsanitize=address
 BUILD_DIR = $(shell pwd)
 LDFLAGS += -lperf_counters
 
-
 perf_counters_util.o: perf_counters_util.c perf_counters_util.h 
 	$(CC) $(CFLAGS) -c $<
 
@@ -15,7 +14,7 @@ uncore_perfmon.o: uncore_perfmon.c uncore_perfmon.h
 	$(CC) $(CFLAGS) -c $<
 
 perf_counters.a: perf_counters_util.o pmu_perfmon.o uncore_perfmon.o
-	ar rcs perf_counters.a perf_counters_util.o pmu_perfmon.o uncore_perfmon.o 
+	ar rcs perf_counters.a $^
 
 #Move the library files into the local include folder for other projects to use
 lib: perf_counters.a 
@@ -24,15 +23,15 @@ lib: perf_counters.a
 	sudo cp perf_counters.a /usr/local/lib/libperf_counters.a
 
 #TESTS#
-test_uncore: test_uncore.c
+test_uncore: test_uncore.c perf_counters.a
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
-test_pmu: test_pmu.c
+test_pmu: test_pmu.c perf_counters.a
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
 test: test_uncore test_pmu
 
-all: clean lib test 
+all: lib test 
 
 clean:
 	rm -rf *.o *.a test_uncore test_pmu
