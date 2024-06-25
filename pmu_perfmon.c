@@ -174,32 +174,26 @@ void pmu_perfmon_monitor(pmu_perfmon_t *p, void (*exe)(void *, void *), void* ar
 	}
 
 	//warmup of 10 loops to get the counters fresh
-	#pragma GCC unroll 4096
 	for (int s = 0; s < 1000; ++s)
 	{
 		exe(arg1, arg2);
 	}
 
 	//Read Counters
-	#pragma GCC unroll 4096
 	for (register int s = 0; s < *reg_num_fixed_ctrs; ++s)
 		rdpmc((PCTR_FIXED | s), &p->results[s].val_before);
-	#pragma GCC unroll 4096
 	for (register int s = 0; s < *reg_num_ctrs; ++s)
 		rdpmc((PCTR_GENERAL | s), &p->results[s+*reg_num_fixed_ctrs].val_before);
 
 	//Execute the provided function code
-	#pragma GCC unroll 4096
 	for (register int s = 0; s < *reg_samples; ++s)
 	{
 		exe(arg1, arg2);
 	}
 
 	//Read after execution	
-	#pragma GCC unroll 4096
 	for (register int s = 0; s < *reg_num_fixed_ctrs; ++s)
 		rdpmc((PCTR_FIXED | s), &p->results[s].val_after);
-	#pragma GCC unroll 4096
 	for (register int s = 0; s < *reg_num_ctrs; ++s)
 		rdpmc((PCTR_GENERAL | s), &p->results[s+*reg_num_fixed_ctrs].val_after);
 
@@ -230,7 +224,6 @@ void pmu_perfmon_monitor2(pmu_perfmon_t *p, void (*exe1)(uint64_t *, uint64_t *)
 	}
 
 	//warmup of 10 loops to get the counters fresh
-	#pragma GCC unroll 4096
 	for (int s = 0; s < 1000; ++s)
 	{
 		exe1(arg1, arg2);
@@ -238,15 +231,12 @@ void pmu_perfmon_monitor2(pmu_perfmon_t *p, void (*exe1)(uint64_t *, uint64_t *)
 	}
 
 	//Read Counters
-	#pragma GCC unroll 4096
 	for (register int s = 0; s < *reg_num_fixed_ctrs; ++s)
 		rdpmc((PCTR_FIXED | s), &p->results[s].val_before);
-	#pragma GCC unroll 4096
 	for (register int s = 0; s < *reg_num_ctrs; ++s)
 		rdpmc((PCTR_GENERAL | s), &p->results[s+*reg_num_fixed_ctrs].val_before);
 
 	//Execute the provided function code
-	#pragma GCC unroll 4096
 	for (register int s = 0; s < *reg_samples/2; ++s)
 	{
 		exe1(arg1, arg2);
@@ -254,10 +244,8 @@ void pmu_perfmon_monitor2(pmu_perfmon_t *p, void (*exe1)(uint64_t *, uint64_t *)
 	}
 
 	//Read after execution	
-	#pragma GCC unroll 4096
 	for (register int s = 0; s < *reg_num_fixed_ctrs; ++s)
 		rdpmc((PCTR_FIXED | s), &p->results[s].val_after);
-	#pragma GCC unroll 4096
 	for (register int s = 0; s < *reg_num_ctrs; ++s)
 		rdpmc((PCTR_GENERAL | s), &p->results[s+*reg_num_fixed_ctrs].val_after);
 

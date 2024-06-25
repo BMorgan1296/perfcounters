@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS= -O2 $(OPS) -I/usr/local/include #-g -fsanitize=address
+CFLAGS= -O3 $(OPS) -I/usr/local/include -g #-fsanitize=address
 .DEFAULT_GOAL := lib
 BUILD_DIR = $(shell pwd)
 LDFLAGS += -lperf_counters
