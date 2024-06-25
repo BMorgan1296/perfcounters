@@ -49,7 +49,7 @@
 //DEFINE NEW COUNTERS HERE//
 #define PMU_MAX_COUNTER 1024
 #ifdef INTEL_CORE
-	#if defined(GEN10) || defined(GEN11) || defined (GEN12) || defined (GEN13)
+	#if defined(GEN10) || defined(GEN11) || defined (GEN12) || defined (GEN13) || defined (GEN14)
 		COUNTER_T pmu_counters[PMU_MAX_COUNTER] = 
 		{
 			// {0, 0, 0, "INST_RETIRED.ANY"}, //IA32_PERF_FIXED_CTR0
