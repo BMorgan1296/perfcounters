@@ -190,7 +190,7 @@ uint8_t uncore_get_num_cbo(uint8_t affinity)
 	int res = 0; 
 	#if defined(GEN2) || defined(GEN3) || defined(GEN4) || defined(GEN5) || defined(GEN6) || defined(GEN7) || defined(GEN8)
 		res = (uint8_t)rdmsr(affinity, MSR_UNC_CBO_CONFIG) - 1;
-	#elif defined(GEN9) || defined(GEN10) || defined(GEN11) || defined (GEN12) || defined (GEN13)
+	#elif defined(GEN9) || defined(GEN10) || defined(GEN11) || defined (GEN12) || defined (GEN13) || defined (GEN14)
 		res = (uint8_t)rdmsr(affinity, MSR_UNC_CBO_CONFIG);
 		
 		//i9 10900K has 10 slices but the MSRs do not allow accessing slices 7,8,9 >:(
@@ -374,90 +374,90 @@ void uncore_perfmon_read_ctrs(uncore_perfmon_t *u)
 
 void uncore_perfmon_monitor(uncore_perfmon_t *u, void (*exe)(void *, void *), void* arg1, void* arg2)
 {
-	// uint64_t t1, t2;
+	uint64_t t1, t2;
 	
-	// set_cpu(u->affinity);
+	set_cpu(u->affinity);
 
-	// uint8_t fail = 1;
-	// uint8_t n_cbo = uncore_get_num_cbo(u->affinity);
-	// uint8_t *map = u->cbo_ctrs_map;
+	uint8_t fail = 1;
+	uint8_t n_cbo = uncore_get_num_cbo(u->affinity);
+	uint8_t *map = u->cbo_ctrs_map;
 
-	// //We want samples to be in a register so that the execution for loop is quick
-	// uint8_t *reg_affinity = &(u->affinity);
-	// int64_t *reg_samples = &(u->samples);
-	// uint8_t *reg_num_cbo_ctrs = &(u->num_cbo_ctrs);
-	// uint8_t *reg_num_arb_ctrs = &(u->num_arb_ctrs);
-	// uint8_t *reg_num_fixed_ctrs = &(u->num_fixed_ctrs);
+	//We want samples to be in a register so that the execution for loop is quick
+	uint8_t *reg_affinity = &(u->affinity);
+	int64_t *reg_samples = &(u->samples);
+	uint8_t *reg_num_cbo_ctrs = &(u->num_cbo_ctrs);
+	uint8_t *reg_num_arb_ctrs = &(u->num_arb_ctrs);
+	uint8_t *reg_num_fixed_ctrs = &(u->num_fixed_ctrs);
 
-	// //Incorporated some error checking due to weird values sometimes reported when reading from /dev/cpu/X/msr
-	// while(fail)
-	// {
-	// 	fail = 0;
+	//Incorporated some error checking due to weird values sometimes reported when reading from /dev/cpu/X/msr
+	while(fail)
+	{
+		fail = 0;
 
-	// 	//Reset values
-	// 	for (int s = 0; s < REG_TOTAL_CTRS; ++s)
-	// 	{
-	// 		u->results[s].val_before = 0;
-	// 		u->results[s].val_after = 0;
-	// 		u->results[s].total = 0;
-	// 		u->results[s].min = -1;
-	// 		u->results[s].max = 0;
-	// 	}
+		//Reset values
+		for (int s = 0; s < REG_TOTAL_CTRS; ++s)
+		{
+			u->results[s].val_before = 0;
+			u->results[s].val_after = 0;
+			u->results[s].total = 0;
+			u->results[s].min = -1;
+			u->results[s].max = 0;
+		}
+		
+		//Read Counters
+		for (int s = 0, c = 0; s < n_cbo * CBO_MAX_CTR; ++s)
+		{
+			if(*reg_num_cbo_ctrs && map[s])
+			{
+				u->results[c].val_before = rdmsr(*reg_affinity, MSR_UNC_CBO_PERFCTR(u->cbo_ctrs_info[s].cbo, s % CBO_MAX_CTR));
+				c++;
+			}
+		}
 
-	// 	//warmup of 10 loops to get the counters fresh
-	// 	for (int s = 0; s < 1000; ++s)
-	// 	{
-	// 		exe(arg1, arg2);
-	// 	}
-	// 	//Read Counters
-	// 	for (int s = 0, c = 0; s < n_cbo * CBO_MAX_CTR; ++s)
-	// 	{
-	// 		if(*reg_num_cbo_ctrs && map[s])
-	// 		{
-	// 			u->results[c].val_before = rdmsr(*reg_affinity, MSR_UNC_CBO_PERFCTR(u->cbo_ctrs_info[s].cbo, s % CBO_MAX_CTR));
-	// 			c++;
-	// 		}
-	// 	}
-	// 	for (int s = 0; s < *reg_num_arb_ctrs; ++s)
-	// 	{
-	// 		u->results[s + *reg_num_cbo_ctrs].val_before = rdmsr(*reg_affinity, MSR_UNC_ARB_PERFCTR(s));
-	// 	}
-	// 	for (int s = 0; s < *reg_num_fixed_ctrs; ++s)
-	// 		u->results[s + *reg_num_cbo_ctrs + *reg_num_arb_ctrs].val_before = rdmsr(*reg_affinity, MSR_UNC_PERF_FIXED_CTR);
+		for (int s = 0; s < *reg_num_arb_ctrs; ++s)
+		{
+			u->results[s + *reg_num_cbo_ctrs].val_before = rdmsr(*reg_affinity, MSR_UNC_ARB_PERFCTR(s));
+		}
 
-	// 	//Execute the provided function code
-	// 	for (int s = 0; s < *reg_samples; ++s)
-	// 	{
-	// 		exe(arg1, arg2);
-	// 	}
+		for (int s = 0; s < *reg_num_fixed_ctrs; ++s)
+			u->results[s + *reg_num_cbo_ctrs + *reg_num_arb_ctrs].val_before = rdmsr(*reg_affinity, MSR_UNC_PERF_FIXED_CTR);
 
-	// 	//Read after execution		
-	// 	for (int s = 0, c = 0; s < n_cbo * CBO_MAX_CTR; ++s)
-	// 	{
-	// 		if(*reg_num_cbo_ctrs && map[s])
-	// 		{
-	// 			u->results[c].val_after = rdmsr(*reg_affinity, MSR_UNC_CBO_PERFCTR(u->cbo_ctrs_info[s].cbo, s % CBO_MAX_CTR));
-	// 			c++;
-	// 		}
-	// 	}
-	// 	for (int s = 0; s < *reg_num_arb_ctrs; ++s)
-	// 	{
-	// 		u->results[s + *reg_num_cbo_ctrs].val_after = rdmsr(*reg_affinity, MSR_UNC_ARB_PERFCTR(s));
-	// 	}
-	// 	for (int s = 0; s < *reg_num_fixed_ctrs; ++s)
-	// 	{
-	// 		u->results[s + *reg_num_cbo_ctrs + *reg_num_arb_ctrs].val_after = rdmsr(*reg_affinity, MSR_UNC_PERF_FIXED_CTR);
-	// 	}
+		//Execute the provided function code
+		for (int s = 0; s < *reg_samples; ++s)
+		{
+			exe(arg1, arg2);
+		}
 
-	// 	//Collect results
-	// 	for (int s = 0; s < REG_TOTAL_CTRS; ++s)
-	// 	{
-	// 		//Error checking. If counter overflowed (current less than initial measurement) or misread (bits greater than 48 are set) then fail.
-	// 		u->results[s].total = u->results[s].val_after - u->results[s].val_before;
-	// 		if((u->results[s].val_after <= u->results[s].val_before) || ((u->results[s].total >> 48) > 0))
-	// 		{
-	// 			fail = 1;
-	// 		}
-	// 	}
-	// }	
+		//Read after execution		
+		for (int s = 0, c = 0; s < n_cbo * CBO_MAX_CTR; ++s)
+		{
+			if(*reg_num_cbo_ctrs && map[s])
+			{
+				u->results[c].val_after = rdmsr(*reg_affinity, MSR_UNC_CBO_PERFCTR(u->cbo_ctrs_info[s].cbo, s % CBO_MAX_CTR));
+				c++;
+			}
+		}
+
+		for (int s = 0; s < *reg_num_arb_ctrs; ++s)
+		{
+			u->results[s + *reg_num_cbo_ctrs].val_after = rdmsr(*reg_affinity, MSR_UNC_ARB_PERFCTR(s));
+		}
+
+		for (int s = 0; s < *reg_num_fixed_ctrs; ++s)
+		{
+			u->results[s + *reg_num_cbo_ctrs + *reg_num_arb_ctrs].val_after = rdmsr(*reg_affinity, MSR_UNC_PERF_FIXED_CTR);
+		}
+
+		//Collect results
+		for (int s = 0; s < REG_TOTAL_CTRS; ++s)
+		{
+			//Error checking. If counter overflowed (current less than initial measurement) or misread (bits greater than 48 are set) then fail.
+			u->results[s].total = u->results[s].val_after - u->results[s].val_before;
+			if((u->results[s].val_after <= u->results[s].val_before) || ((u->results[s].total >> 48) > 0))
+			{
+				fail = 1;
+			}
+		}
+	}	
 }
+

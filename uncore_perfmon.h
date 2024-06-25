@@ -12,7 +12,7 @@
 	#elif defined (GEN6) || defined(GEN7) || defined(GEN8) || defined(GEN9) || defined(GEN10) || defined(GEN11)
 		#define MSR_UNC_PERF_GLOBAL_CTRL   0xE01
 		#define MSR_UNC_PERF_GLOBAL_STATUS 0xE02
-	#elif defined (GEN12) || defined (GEN13)
+	#elif defined (GEN12) || defined (GEN13) || defined (GEN14)
 		#define MSR_UNC_PERF_GLOBAL_CTRL   0x2FF0
 		#define MSR_UNC_PERF_GLOBAL_STATUS 0x2FF2
 	#endif
@@ -33,7 +33,7 @@
 	#elif defined (GEN11)
 		#define MSR_UNC_CBO_PERFEVTSEL(CBo,n) (0x700 + (CBo*0x8) + n)
 		#define MSR_UNC_CBO_PERFCTR(CBo,n) (0x700 + (CBo*0x8) + (n+2))
-	#elif defined (GEN12) || defined (GEN13)
+	#elif defined (GEN12) || defined (GEN13) || defined (GEN14)
 		#define MSR_UNC_CBO_PERFEVTSEL(CBo,n) (0x2000 + (CBo*0x8) + n)
 		#define MSR_UNC_CBO_PERFCTR(CBo,n) (0x2000 + (CBo*0x8) + (n+2))
 	#endif
@@ -43,7 +43,7 @@
 	#if defined (GEN2) || defined(GEN3) ||defined(GEN4) || defined(GEN5) || defined(GEN6) || defined(GEN7) || defined(GEN8) || defined(GEN9) || defined(GEN10) || defined(GEN11)
 		#define MSR_UNC_ARB_PERFEVTSEL(ARB) (0x3B2 + ARB)
 		#define MSR_UNC_ARB_PERFCTR(ARB) (0x3B0 + ARB)
-	#elif defined (GEN12) || defined (GEN13)
+	#elif defined (GEN12) || defined (GEN13) || defined (GEN14)
 		#define MSR_UNC_ARB_PERFEVTSEL(ARB) (0x2FD0 + (ARB*0x8))
 		#define MSR_UNC_ARB_PERFCTR(ARB) (0x2FD0 + (ARB*0x8) + 2)
 		#define MSR_UNC_ARB_PERF_STATUS(ARB) (0x2FD0 + (ARB*0x8 + 4)
@@ -59,7 +59,7 @@
 	#if defined (GEN2) || defined(GEN3) ||defined(GEN4) || defined(GEN5) || defined(GEN6) || defined(GEN7) || defined(GEN8) || defined(GEN9) || defined(GEN10) || defined(GEN11)
 		#define MSR_UNC_PERF_FIXED_CTRL 0x394
 		#define MSR_UNC_PERF_FIXED_CTR  0x395 //Uncore clock cycles. Reading from this will give that event value.
-	#elif defined (GEN12) || defined (GEN13)
+	#elif defined (GEN12) || defined (GEN13) || defined (GEN14)
 		#define MSR_UNC_PERF_FIXED_CTRL 0x2FDE
 		#define MSR_UNC_PERF_FIXED_CTR  0x2FDF
 	#endif
