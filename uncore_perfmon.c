@@ -453,7 +453,7 @@ void uncore_perfmon_monitor(uncore_perfmon_t *u, void (*exe)(void *, void *), vo
 		{
 			//Error checking. If counter overflowed (current less than initial measurement) or misread (bits greater than 48 are set) then fail.
 			u->results[s].total = u->results[s].val_after - u->results[s].val_before;
-			if((u->results[s].val_after <= u->results[s].val_before) || ((u->results[s].total >> 48) > 0))
+			if((u->results[s].val_after < u->results[s].val_before) || ((u->results[s].total >> 48) > 0))
 			{
 				fail = 1;
 			}

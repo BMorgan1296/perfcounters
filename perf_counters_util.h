@@ -62,27 +62,29 @@ inline void rdpmc(uint32_t counter, uint64_t *result)
     *result = ((uint64_t)hi << 32) | (uint64_t)lo;
 }
 
-inline uint64_t rdmsr(uint8_t affinity, uint32_t reg)
+static int fp = -1;
+static inline uint64_t rdmsr(uint8_t affinity, uint32_t reg)
 {
-    int fp;
     uint64_t msr_data = 0;
-    char file[128] = {0};
 
-    snprintf(file, 128, "/dev/cpu/%d/msr", affinity);
-
-    fp = open(file, O_RDONLY);
     if(fp < 0)
     {
-        fprintf(stderr, "rdmsr(): could not open /dev/cpu/%d/msr, out of range of available processors?\n", affinity);
-        exit(1);
+        char file[128] = {0};
+        snprintf(file, sizeof(file), "/dev/cpu/%d/msr", affinity);
+        fp = open(file, O_RDONLY);
+        if(fp < 0)
+        {
+            fprintf(stderr, "rdmsr(): could not open /dev/cpu/%d/msr, out of range of available processors or insufficient permissions?\n", affinity);
+            exit(1);
+        }
     }
 
     if(pread(fp, &msr_data, sizeof(msr_data), reg) != sizeof(msr_data))
     {
-        fprintf(stderr, "rdmsr(): fgets() could not read MSR 0x%x from /dev/cpu/%d/msr, check msr kernel module is inserted\n", reg, affinity);
+        fprintf(stderr, "rdmsr(): could not read MSR 0x%x from /dev/cpu/%d/msr, check msr kernel module is inserted\n", reg, affinity);
         exit(1);
     }
-    close(fp);
+
     return msr_data;
 }
 
